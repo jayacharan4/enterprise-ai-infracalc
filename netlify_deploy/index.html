@@ -1,0 +1,4263 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Enterprise AI InfraCalc</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.5.0/dist/chart.umd.js" integrity="sha384-iU8HYtnGQ8Cy4zl7gbNMOhsDTTKX02BTXptVP/vqAWIaTfM7isw76iyZCsjL2eVi" crossorigin="anonymous"></script>
+<style>
+/* ===== CSS VARIABLES / THEME ===== */
+:root {
+  --amd-red: #ED1C24;
+  --amd-red-dark: #c0141a;
+  --sidebar-bg: #0f1117;
+  --sidebar-text: #e2e8f0;
+  --sidebar-muted: #94a3b8;
+  --sidebar-hover: rgba(237,28,36,0.12);
+  --sidebar-active: rgba(237,28,36,0.18);
+  --sidebar-border: rgba(255,255,255,0.06);
+  --sidebar-width: 240px;
+
+  --bg-primary: #f8f9fb;
+  --bg-secondary: #ffffff;
+  --bg-card: #ffffff;
+  --bg-section: #f1f5f9;
+  --text-primary: #0f172a;
+  --text-secondary: #475569;
+  --text-muted: #94a3b8;
+  --border: #e2e8f0;
+  --border-focus: #ED1C24;
+  --input-bg: #ffffff;
+  --shadow-sm: 0 1px 3px rgba(0,0,0,0.07), 0 1px 2px rgba(0,0,0,0.04);
+  --shadow-md: 0 4px 12px rgba(0,0,0,0.08), 0 2px 6px rgba(0,0,0,0.04);
+  --shadow-lg: 0 10px 30px rgba(0,0,0,0.10);
+  --radius: 8px;
+  --radius-lg: 12px;
+  --accent-blue: #2563eb;
+  --accent-green: #16a34a;
+  --accent-amber: #d97706;
+  --accent-red: #ED1C24;
+  --tag-bg: #f1f5f9;
+  --tag-text: #475569;
+  --tooltip-bg: #1e293b;
+  --tooltip-text: #f8fafc;
+}
+
+[data-theme="dark"] {
+  --bg-primary: #0a0d14;
+  --bg-secondary: #111827;
+  --bg-card: #1a2233;
+  --bg-section: #161d2e;
+  --text-primary: #f1f5f9;
+  --text-secondary: #94a3b8;
+  --text-muted: #64748b;
+  --border: #1e293b;
+  --border-focus: #ED1C24;
+  --input-bg: #1a2233;
+  --shadow-sm: 0 1px 3px rgba(0,0,0,0.3);
+  --shadow-md: 0 4px 12px rgba(0,0,0,0.4);
+  --shadow-lg: 0 10px 30px rgba(0,0,0,0.5);
+  --tag-bg: #1e293b;
+  --tag-text: #94a3b8;
+  --sidebar-bg: #070a10;
+  --sidebar-border: rgba(255,255,255,0.04);
+}
+
+/* ===== RESET & BASE ===== */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { font-size: 14px; scroll-behavior: smooth; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Inter', sans-serif;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  line-height: 1.6;
+  min-height: 100vh;
+  transition: background 0.2s, color 0.2s;
+}
+a { color: var(--accent-blue); text-decoration: none; }
+a:hover { text-decoration: underline; }
+button { cursor: pointer; font-family: inherit; }
+input, select, textarea { font-family: inherit; }
+select option { background: var(--input-bg); color: var(--text-primary); }
+
+/* ===== LAYOUT ===== */
+.app-shell { display: flex; min-height: 100vh; }
+
+/* ===== SIDEBAR ===== */
+.sidebar {
+  width: var(--sidebar-width);
+  background: var(--sidebar-bg);
+  color: var(--sidebar-text);
+  display: flex;
+  flex-direction: column;
+  position: fixed;
+  top: 0; left: 0; bottom: 0;
+  z-index: 100;
+  transition: transform 0.25s ease;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+.sidebar-logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 20px 18px 16px;
+  border-bottom: 1px solid var(--sidebar-border);
+}
+.logo-mark {
+  width: 32px; height: 32px;
+  background: var(--amd-red);
+  border-radius: 6px;
+  display: flex; align-items: center; justify-content: center;
+  font-weight: 800; font-size: 13px; color: #fff; letter-spacing: -0.5px;
+  flex-shrink: 0;
+}
+.logo-text { line-height: 1.2; }
+.logo-name { font-size: 13px; font-weight: 700; color: #f1f5f9; }
+.logo-sub { font-size: 10px; color: var(--sidebar-muted); letter-spacing: 0.5px; text-transform: uppercase; }
+
+.sidebar-section { padding: 8px 0; }
+.sidebar-section-label {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--sidebar-muted);
+  padding: 8px 18px 4px;
+}
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 18px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--sidebar-muted);
+  border-left: 3px solid transparent;
+  cursor: pointer;
+  transition: all 0.15s;
+  user-select: none;
+  position: relative;
+}
+.nav-item:hover { background: var(--sidebar-hover); color: var(--sidebar-text); }
+.nav-item.active { background: var(--sidebar-active); color: #ffffff; border-left-color: var(--amd-red); }
+.nav-item .nav-icon { font-size: 15px; width: 18px; text-align: center; flex-shrink: 0; }
+.nav-item .nav-badge {
+  margin-left: auto;
+  font-size: 10px;
+  background: var(--amd-red);
+  color: #fff;
+  padding: 1px 6px;
+  border-radius: 10px;
+  font-weight: 600;
+}
+.sidebar-footer {
+  margin-top: auto;
+  padding: 12px 18px;
+  border-top: 1px solid var(--sidebar-border);
+  font-size: 11px;
+  color: var(--sidebar-muted);
+}
+.sidebar-footer strong { color: #64748b; display: block; margin-bottom: 2px; }
+
+/* ===== MAIN CONTENT ===== */
+.main-content {
+  margin-left: var(--sidebar-width);
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ===== TOP BAR ===== */
+.topbar {
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border);
+  padding: 0 28px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  height: 54px;
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  box-shadow: var(--shadow-sm);
+}
+.topbar-title {
+  flex: 1;
+  min-width: 0;
+}
+.topbar-title h1 { font-size: 16px; font-weight: 700; color: var(--text-primary); line-height: 1; }
+.topbar-title p { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+.topbar-actions { display: flex; align-items: center; gap: 8px; }
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 14px;
+  border-radius: var(--radius);
+  font-size: 12px;
+  font-weight: 600;
+  border: none;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+.btn-primary { background: var(--amd-red); color: #fff; }
+.btn-primary:hover { background: var(--amd-red-dark); }
+.btn-secondary {
+  background: var(--bg-section);
+  color: var(--text-secondary);
+  border: 1px solid var(--border);
+}
+.btn-secondary:hover { border-color: var(--amd-red); color: var(--amd-red); }
+.btn-ghost { background: transparent; color: var(--text-muted); border: 1px solid transparent; }
+.btn-ghost:hover { background: var(--bg-section); color: var(--text-primary); }
+.btn-icon { padding: 7px 9px; }
+
+/* Theme toggle */
+.theme-toggle {
+  width: 34px; height: 34px;
+  border-radius: var(--radius);
+  background: var(--bg-section);
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer;
+  font-size: 15px;
+  transition: all 0.15s;
+}
+.theme-toggle:hover { border-color: var(--amd-red); color: var(--amd-red); }
+
+/* Mobile menu toggle */
+.mobile-menu-btn {
+  display: none;
+  width: 34px; height: 34px;
+  border-radius: var(--radius);
+  background: var(--bg-section);
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  align-items: center; justify-content: center;
+  cursor: pointer;
+  font-size: 18px;
+}
+
+/* ===== PAGE CONTENT ===== */
+.page-content {
+  padding: 24px 28px 48px;
+  max-width: 1400px;
+  width: 100%;
+}
+.page { display: none; }
+.page.active { display: block; }
+
+/* ===== GRID LAYOUTS ===== */
+.calc-grid {
+  display: grid;
+  grid-template-columns: 1fr 380px;
+  gap: 20px;
+  align-items: start;
+}
+.calc-inputs { min-width: 0; }
+.calc-results { position: sticky; top: 78px; }
+
+/* ===== CARDS ===== */
+.card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
+}
+.card-header {
+  padding: 16px 20px 14px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.card-header h3 { font-size: 14px; font-weight: 700; color: var(--text-primary); }
+.card-header p { font-size: 12px; color: var(--text-muted); margin-top: 1px; }
+.card-header-icon {
+  width: 30px; height: 30px;
+  border-radius: 8px;
+  background: rgba(237,28,36,0.10);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 14px;
+  flex-shrink: 0;
+}
+.card-body { padding: 18px 20px; }
+.card + .card { margin-top: 16px; }
+
+/* ===== FORM ELEMENTS ===== */
+.form-section { margin-bottom: 20px; }
+.form-section:last-child { margin-bottom: 0; }
+.form-section-title {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: var(--text-muted);
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border);
+}
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+.form-row.three { grid-template-columns: 1fr 1fr 1fr; }
+.form-row.single { grid-template-columns: 1fr; }
+.form-group { display: flex; flex-direction: column; gap: 5px; }
+.form-group label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+.form-group input,
+.form-group select,
+.form-group textarea {
+  padding: 8px 11px;
+  background: var(--input-bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text-primary);
+  font-size: 13px;
+  transition: border-color 0.15s;
+  width: 100%;
+}
+.form-group input:focus,
+.form-group select:focus,
+.form-group textarea:focus {
+  outline: none;
+  border-color: var(--border-focus);
+  box-shadow: 0 0 0 3px rgba(237,28,36,0.08);
+}
+.form-group input[type=range] {
+  padding: 0;
+  border: none;
+  background: transparent;
+  box-shadow: none;
+  accent-color: var(--amd-red);
+}
+.form-group input[type=range]:focus { box-shadow: none; }
+.input-unit {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+.input-hint {
+  font-size: 11px;
+  color: var(--text-muted);
+  line-height: 1.4;
+}
+.form-group.has-unit { position: relative; }
+.form-group.has-unit input { padding-right: 42px; }
+.unit-label {
+  position: absolute;
+  right: 10px;
+  bottom: 9px;
+  font-size: 11px;
+  color: var(--text-muted);
+  pointer-events: none;
+}
+
+/* Tooltip */
+.tooltip-wrap { position: relative; display: inline-flex; align-items: center; }
+.tooltip-icon {
+  width: 14px; height: 14px;
+  background: var(--tag-bg);
+  border-radius: 50%;
+  display: inline-flex; align-items: center; justify-content: center;
+  font-size: 9px;
+  color: var(--text-muted);
+  cursor: help;
+  border: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.tooltip-box {
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--tooltip-bg);
+  color: var(--tooltip-text);
+  font-size: 11px;
+  padding: 7px 10px;
+  border-radius: 6px;
+  white-space: nowrap;
+  max-width: 220px;
+  white-space: normal;
+  line-height: 1.5;
+  width: 200px;
+  z-index: 200;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.15s;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+}
+.tooltip-wrap:hover .tooltip-box { opacity: 1; }
+
+/* ===== RESULT METRIC CARDS ===== */
+.metric-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+.metric-card {
+  background: var(--bg-section);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 12px 14px;
+}
+.metric-label {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.7px;
+  color: var(--text-muted);
+  margin-bottom: 4px;
+}
+.metric-value {
+  font-size: 22px;
+  font-weight: 800;
+  color: var(--text-primary);
+  line-height: 1;
+}
+.metric-value.highlight { color: var(--amd-red); }
+.metric-value.good { color: var(--accent-green); }
+.metric-value.warn { color: var(--accent-amber); }
+.metric-unit {
+  font-size: 11px;
+  color: var(--text-muted);
+  font-weight: 500;
+  margin-top: 2px;
+}
+.metric-card.full { grid-column: 1 / -1; }
+.metric-card.primary {
+  background: linear-gradient(135deg, rgba(237,28,36,0.08) 0%, rgba(237,28,36,0.04) 100%);
+  border-color: rgba(237,28,36,0.2);
+}
+
+/* ===== STATUS / ALERT BOXES ===== */
+.alert {
+  display: flex;
+  gap: 10px;
+  padding: 10px 14px;
+  border-radius: var(--radius);
+  font-size: 12px;
+  line-height: 1.5;
+  margin-top: 10px;
+}
+.alert-icon { font-size: 14px; flex-shrink: 0; margin-top: 1px; }
+.alert-info { background: rgba(37,99,235,0.08); border: 1px solid rgba(37,99,235,0.2); color: var(--text-secondary); }
+.alert-warn { background: rgba(217,119,6,0.08); border: 1px solid rgba(217,119,6,0.25); color: var(--text-secondary); }
+.alert-error { background: rgba(237,28,36,0.08); border: 1px solid rgba(237,28,36,0.2); color: var(--text-secondary); }
+.alert-success { background: rgba(22,163,74,0.08); border: 1px solid rgba(22,163,74,0.2); color: var(--text-secondary); }
+
+/* ===== SEGMENTED CONTROL ===== */
+.seg-control {
+  display: flex;
+  background: var(--bg-section);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 3px;
+  gap: 2px;
+}
+.seg-btn {
+  flex: 1;
+  padding: 6px 10px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  transition: all 0.15s;
+  text-align: center;
+}
+.seg-btn.active { background: var(--bg-card); color: var(--text-primary); box-shadow: var(--shadow-sm); }
+
+/* ===== COLLAPSIBLE SECTION ===== */
+.collapsible { border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; margin-bottom: 12px; }
+.collapsible-header {
+  display: flex; align-items: center; gap: 10px;
+  padding: 12px 16px;
+  background: var(--bg-section);
+  cursor: pointer;
+  user-select: none;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  transition: background 0.15s;
+}
+.collapsible-header:hover { background: var(--bg-card); color: var(--text-primary); }
+.collapsible-arrow { margin-left: auto; font-size: 11px; transition: transform 0.2s; }
+.collapsible.open .collapsible-arrow { transform: rotate(180deg); }
+.collapsible-body { display: none; padding: 16px; background: var(--bg-card); border-top: 1px solid var(--border); }
+.collapsible.open .collapsible-body { display: block; }
+
+/* ===== PRESET CHIPS ===== */
+.preset-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 14px; }
+.chip {
+  padding: 5px 12px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 600;
+  border: 1px solid var(--border);
+  background: var(--tag-bg);
+  color: var(--tag-text);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.chip:hover { border-color: var(--amd-red); color: var(--amd-red); }
+.chip.active { background: var(--amd-red); border-color: var(--amd-red); color: #fff; }
+
+/* ===== TABLE ===== */
+.data-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+.data-table th {
+  text-align: left;
+  padding: 8px 12px;
+  background: var(--bg-section);
+  color: var(--text-muted);
+  font-weight: 700;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  border-bottom: 1px solid var(--border);
+}
+.data-table td {
+  padding: 9px 12px;
+  border-bottom: 1px solid var(--border);
+  color: var(--text-secondary);
+}
+.data-table tr:last-child td { border-bottom: none; }
+.data-table tr:hover td { background: var(--bg-section); }
+.data-table td.val { font-weight: 700; color: var(--text-primary); font-variant-numeric: tabular-nums; }
+.data-table td.highlight { color: var(--amd-red); font-weight: 700; }
+
+/* ===== DIVIDER ===== */
+.divider { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
+
+/* ===== TAG / BADGE ===== */
+.badge {
+  display: inline-flex; align-items: center;
+  padding: 2px 8px;
+  border-radius: 20px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+}
+.badge-red { background: rgba(237,28,36,0.1); color: var(--amd-red); }
+.badge-green { background: rgba(22,163,74,0.1); color: var(--accent-green); }
+.badge-blue { background: rgba(37,99,235,0.1); color: var(--accent-blue); }
+.badge-amber { background: rgba(217,119,6,0.1); color: var(--accent-amber); }
+.badge-gray { background: var(--tag-bg); color: var(--tag-text); }
+
+/* ===== FORMULA BOX ===== */
+.formula-box {
+  background: var(--bg-section);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--amd-red);
+  border-radius: var(--radius);
+  padding: 12px 14px;
+  font-family: 'SF Mono', 'Menlo', 'Consolas', monospace;
+  font-size: 11px;
+  color: var(--text-secondary);
+  line-height: 1.8;
+  margin: 10px 0;
+  white-space: pre-wrap;
+}
+
+/* ===== CHART WRAPPER ===== */
+.chart-wrap { position: relative; height: 200px; margin: 12px 0; }
+
+/* ===== PROGRESS BAR ===== */
+.progress-wrap { margin: 6px 0; }
+.progress-label { display: flex; justify-content: space-between; font-size: 11px; color: var(--text-muted); margin-bottom: 4px; }
+.progress-bar { height: 6px; background: var(--bg-section); border-radius: 4px; overflow: hidden; border: 1px solid var(--border); }
+.progress-fill { height: 100%; border-radius: 4px; transition: width 0.4s ease; }
+
+/* ===== DISCLAIMER ===== */
+.disclaimer {
+  font-size: 11px;
+  color: var(--text-muted);
+  line-height: 1.6;
+  padding: 12px 16px;
+  background: var(--bg-section);
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  margin-top: 20px;
+}
+.disclaimer strong { color: var(--text-secondary); }
+
+/* ===== RESULTS PAGE SPECIFIC ===== */
+.results-hero {
+  background: linear-gradient(135deg, var(--amd-red) 0%, #7b0d10 100%);
+  border-radius: var(--radius-lg);
+  padding: 28px;
+  color: #fff;
+  margin-bottom: 20px;
+  position: relative;
+  overflow: hidden;
+}
+.results-hero::after {
+  content: '';
+  position: absolute;
+  right: -40px; top: -40px;
+  width: 200px; height: 200px;
+  background: rgba(255,255,255,0.05);
+  border-radius: 50%;
+}
+.results-hero h2 { font-size: 22px; font-weight: 800; margin-bottom: 6px; }
+.results-hero p { font-size: 13px; opacity: 0.8; }
+.results-hero-meta { display: flex; gap: 20px; margin-top: 16px; }
+.results-hero-meta span { font-size: 12px; opacity: 0.75; }
+.results-hero-meta strong { font-weight: 700; display: block; font-size: 15px; opacity: 1; }
+
+/* ===== GETTING STARTED / HELP ===== */
+.help-hero {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 32px;
+  margin-bottom: 24px;
+  text-align: center;
+}
+.help-hero .big-icon { font-size: 48px; margin-bottom: 14px; }
+.help-hero h2 { font-size: 24px; font-weight: 800; margin-bottom: 8px; }
+.help-hero p { font-size: 14px; color: var(--text-muted); max-width: 600px; margin: 0 auto; }
+.help-steps { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 24px; }
+.help-step {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 20px 16px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.help-step:hover { border-color: var(--amd-red); box-shadow: var(--shadow-md); transform: translateY(-2px); }
+.help-step .step-num {
+  width: 28px; height: 28px;
+  background: var(--amd-red);
+  color: #fff;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 12px;
+  font-weight: 800;
+  margin: 0 auto 10px;
+}
+.help-step h4 { font-size: 13px; font-weight: 700; margin-bottom: 6px; }
+.help-step p { font-size: 11px; color: var(--text-muted); line-height: 1.5; }
+
+/* ===== SIDEBAR OVERLAY (mobile) ===== */
+.sidebar-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.5);
+  z-index: 90;
+}
+
+/* ===== RESPONSIVE ===== */
+@media (max-width: 1100px) {
+  .calc-grid { grid-template-columns: 1fr; }
+  .calc-results { position: static; }
+}
+@media (max-width: 768px) {
+  .sidebar { transform: translateX(-100%); }
+  .sidebar.open { transform: translateX(0); }
+  .sidebar-overlay.open { display: block; }
+  .main-content { margin-left: 0; }
+  .mobile-menu-btn { display: flex; }
+  .page-content { padding: 16px 16px 40px; }
+  .topbar { padding: 0 12px; gap: 10px; }
+  .topbar-title h1 { font-size: 15px; }
+  .topbar-title p { display: none; }
+  .form-row { grid-template-columns: 1fr; }
+  .form-row.three { grid-template-columns: 1fr 1fr; }
+  .help-steps { grid-template-columns: 1fr 1fr; }
+  .results-hero-meta { flex-wrap: wrap; gap: 12px; }
+  .metric-grid { grid-template-columns: 1fr; }
+  /* Tables scroll horizontally instead of overflowing */
+  .card-body { overflow-x: auto; }
+  .data-table { min-width: 420px; }
+}
+@media (max-width: 480px) {
+  html { font-size: 13px; }
+  .help-steps { grid-template-columns: 1fr; }
+  .form-row.three { grid-template-columns: 1fr; }
+  .page-content { padding: 12px 12px 36px; }
+  .results-hero { padding: 20px 18px; }
+  .results-hero h2 { font-size: 18px; }
+  /* Compact topbar actions: hide button labels, keep tappable icons */
+  .topbar-actions { gap: 6px; }
+  .topbar-actions .btn { padding: 8px 11px; min-width: 38px; justify-content: center; }
+  .btn-label-full { display: none; }
+  .btn-label-icon { font-size: 15px; }
+  /* Larger tap targets for nav + chips */
+  .nav-item { padding: 12px 18px; }
+  .chip { padding: 7px 14px; }
+  .seg-btn { padding: 9px 10px; }
+}
+
+/* ===== GPU COMPARISON BADGES ===== */
+.gpu-option { display: flex; align-items: center; gap: 8px; padding: 10px 12px; border: 1px solid var(--border); border-radius: var(--radius); cursor: pointer; transition: all 0.15s; margin-bottom: 8px; }
+.gpu-option:hover { border-color: var(--amd-red); }
+.gpu-option.selected { border-color: var(--amd-red); background: rgba(237,28,36,0.04); }
+.gpu-option input[type=radio] { accent-color: var(--amd-red); }
+.gpu-option-name { font-size: 13px; font-weight: 700; color: var(--text-primary); }
+.gpu-option-specs { font-size: 11px; color: var(--text-muted); }
+.gpu-option-badge { margin-left: auto; }
+
+/* ===== VENDOR TAGS ===== */
+.vendor-amd { background: rgba(237,28,36,0.1); color: var(--amd-red); }
+.vendor-nvidia { background: rgba(118,185,0,0.12); color: #5a8f00; }
+[data-theme="dark"] .vendor-nvidia { color: #8dc63f; }
+
+/* ===== PRINT ===== */
+@media print {
+  .sidebar, .topbar-actions, .btn, .mobile-menu-btn, .theme-toggle { display: none !important; }
+  .main-content { margin-left: 0; }
+  .page { display: block !important; }
+  .topbar { position: static; }
+}
+
+/* ===== CHATBOT WIDGET ===== */
+#chat-fab {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  width: 54px;
+  height: 54px;
+  border-radius: 50%;
+  background: var(--amd-red);
+  color: #fff;
+  border: none;
+  box-shadow: 0 4px 16px rgba(237,28,36,0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+  cursor: pointer;
+  z-index: 1000;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+#chat-fab:hover { transform: scale(1.08); box-shadow: 0 6px 22px rgba(237,28,36,0.55); }
+#chat-fab .chat-badge {
+  position: absolute;
+  top: -2px; right: -2px;
+  width: 14px; height: 14px;
+  background: var(--accent-green);
+  border-radius: 50%;
+  border: 2px solid #fff;
+}
+
+#chat-panel {
+  position: fixed;
+  bottom: 90px;
+  right: 24px;
+  width: 380px;
+  max-height: 580px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  display: none;
+  flex-direction: column;
+  z-index: 1000;
+  overflow: hidden;
+}
+#chat-panel.open { display: flex; }
+
+.chat-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 16px;
+  background: var(--amd-red);
+  color: #fff;
+  flex-shrink: 0;
+}
+.chat-header-icon {
+  width: 32px; height: 32px;
+  background: rgba(255,255,255,0.2);
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 16px;
+  flex-shrink: 0;
+}
+.chat-header-info { flex: 1; min-width: 0; }
+.chat-header-info strong { font-size: 13px; font-weight: 700; display: block; }
+.chat-header-info span { font-size: 11px; opacity: 0.85; }
+.chat-close-btn {
+  background: rgba(255,255,255,0.15);
+  border: none;
+  color: #fff;
+  width: 28px; height: 28px;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer;
+  font-size: 14px;
+  flex-shrink: 0;
+  transition: background 0.15s;
+}
+.chat-close-btn:hover { background: rgba(255,255,255,0.3); }
+
+/* Access code gate */
+.chat-gate {
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 32px 24px;
+  flex: 1;
+  justify-content: center;
+}
+.chat-gate.visible { display: flex; }
+.chat-gate-icon { font-size: 36px; margin-bottom: 12px; }
+.chat-gate-title { font-size: 15px; font-weight: 700; color: var(--text-primary); margin-bottom: 6px; }
+.chat-gate-sub { font-size: 12px; color: var(--text-muted); line-height: 1.5; margin-bottom: 18px; max-width: 260px; }
+.chat-gate-input {
+  width: 100%;
+  max-width: 240px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--input-bg);
+  color: var(--text-primary);
+  font-size: 14px;
+  font-family: inherit;
+  text-align: center;
+  letter-spacing: 1px;
+}
+.chat-gate-input:focus { outline: none; border-color: var(--amd-red); box-shadow: 0 0 0 3px rgba(237,28,36,0.08); }
+.chat-gate-error {
+  display: none;
+  font-size: 11px;
+  color: var(--amd-red);
+  margin-top: 8px;
+}
+.chat-gate-error.visible { display: block; }
+.chat-gate-btn {
+  margin-top: 14px;
+  width: 100%;
+  max-width: 240px;
+  padding: 10px;
+  background: var(--amd-red);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.chat-gate-btn:hover { background: var(--amd-red-dark); }
+
+.chat-messages {
+  flex: 1;
+  overflow-y: auto;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  scroll-behavior: smooth;
+}
+
+.chat-msg {
+  max-width: 88%;
+  padding: 9px 12px;
+  border-radius: 12px;
+  font-size: 12.5px;
+  line-height: 1.55;
+  word-break: break-word;
+}
+.chat-msg.bot {
+  background: var(--bg-section);
+  border: 1px solid var(--border);
+  color: var(--text-primary);
+  align-self: flex-start;
+  border-bottom-left-radius: 3px;
+}
+.chat-msg.user {
+  background: var(--amd-red);
+  color: #fff;
+  align-self: flex-end;
+  border-bottom-right-radius: 3px;
+}
+.chat-msg.bot .msg-label {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--amd-red);
+  margin-bottom: 3px;
+}
+.chat-ref-wrap {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px dashed var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+.chat-ref-label {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  color: var(--text-muted);
+}
+.chat-ref-link {
+  text-align: left;
+  background: rgba(237,28,36,0.06);
+  border: 1px solid rgba(237,28,36,0.25);
+  color: var(--amd-red);
+  font-size: 11.5px;
+  font-weight: 600;
+  padding: 7px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s;
+  line-height: 1.3;
+}
+.chat-ref-link:hover { background: var(--amd-red); color: #fff; border-color: var(--amd-red); }
+.chat-typing {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+  padding: 10px 14px;
+  background: var(--bg-section);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  border-bottom-left-radius: 3px;
+  align-self: flex-start;
+  max-width: 70px;
+}
+.chat-typing span {
+  width: 6px; height: 6px;
+  background: var(--text-muted);
+  border-radius: 50%;
+  animation: chatBounce 1.2s infinite ease-in-out;
+}
+.chat-typing span:nth-child(2) { animation-delay: 0.15s; }
+.chat-typing span:nth-child(3) { animation-delay: 0.3s; }
+@keyframes chatBounce {
+  0%, 60%, 100% { transform: translateY(0); }
+  30% { transform: translateY(-5px); }
+}
+
+.chat-suggestions {
+  padding: 0 14px 10px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  flex-shrink: 0;
+}
+.chat-suggestion-chip {
+  padding: 4px 10px;
+  border-radius: 14px;
+  font-size: 11px;
+  font-weight: 500;
+  border: 1px solid var(--border);
+  background: var(--bg-section);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+.chat-suggestion-chip:hover { border-color: var(--amd-red); color: var(--amd-red); }
+
+.chat-key-row {
+  padding: 10px 14px;
+  border-top: 1px solid var(--border);
+  background: var(--bg-section);
+  display: none;
+  flex-shrink: 0;
+}
+.chat-key-row.visible { display: flex; gap: 6px; align-items: center; }
+.chat-key-row input {
+  flex: 1;
+  padding: 7px 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--input-bg);
+  color: var(--text-primary);
+  font-size: 12px;
+  font-family: inherit;
+}
+.chat-key-row input:focus { outline: none; border-color: var(--amd-red); }
+.chat-key-save-btn {
+  padding: 7px 12px;
+  background: var(--amd-red);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.chat-key-save-btn:hover { background: var(--amd-red-dark); }
+
+.chat-input-row {
+  display: flex;
+  gap: 8px;
+  padding: 12px 14px;
+  border-top: 1px solid var(--border);
+  background: var(--bg-card);
+  flex-shrink: 0;
+}
+.chat-input-row textarea {
+  flex: 1;
+  padding: 8px 11px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--input-bg);
+  color: var(--text-primary);
+  font-size: 12.5px;
+  font-family: inherit;
+  resize: none;
+  line-height: 1.4;
+  max-height: 90px;
+  min-height: 36px;
+  overflow-y: auto;
+}
+.chat-input-row textarea:focus { outline: none; border-color: var(--amd-red); }
+.chat-send-btn {
+  width: 36px; height: 36px;
+  border-radius: var(--radius);
+  background: var(--amd-red);
+  color: #fff;
+  border: none;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer;
+  font-size: 14px;
+  flex-shrink: 0;
+  transition: background 0.15s;
+  align-self: flex-end;
+}
+.chat-send-btn:hover { background: var(--amd-red-dark); }
+.chat-send-btn:disabled { background: var(--text-muted); cursor: not-allowed; }
+
+@media (max-width: 600px) {
+  /* Near-fullscreen chat on phones */
+  #chat-panel {
+    width: auto;
+    left: 8px;
+    right: 8px;
+    bottom: 8px;
+    top: 8px;
+    max-height: none;
+    border-radius: 12px;
+  }
+  #chat-fab { bottom: 16px; right: 16px; }
+  .chat-input-row textarea { font-size: 16px; } /* prevent iOS zoom-on-focus */
+  .chat-gate-input { font-size: 16px; }
+  .chat-msg { max-width: 92%; font-size: 13.5px; }
+}
+@media print { #chat-fab, #chat-panel { display: none !important; } }
+
+/* Lock background scroll when chat is fullscreen on mobile */
+body.chat-scroll-lock { overflow: hidden; touch-action: none; }
+</style>
+</head>
+<body>
+<div class="app-shell">
+
+<!-- SIDEBAR OVERLAY -->
+<div class="sidebar-overlay" id="sidebarOverlay" onclick="closeSidebar()"></div>
+
+<!-- SIDEBAR -->
+<nav class="sidebar" id="sidebar">
+  <div class="sidebar-logo">
+    <div class="logo-mark">AI</div>
+    <div class="logo-text">
+      <div class="logo-name">Enterprise AI InfraCalc</div>
+      <div class="logo-sub">Infrastructure Planning Tool</div>
+    </div>
+  </div>
+  <div class="sidebar-section">
+    <div class="sidebar-section-label">Navigation</div>
+    <div class="nav-item active" onclick="showPage('help')" id="nav-help">
+      <span class="nav-icon">🏠</span> Getting Started
+    </div>
+    <div class="nav-item" onclick="showPage('sizing')" id="nav-sizing">
+      <span class="nav-icon">⚡</span> GenAI GPU Sizing
+    </div>
+    <div class="nav-item" onclick="showPage('tco')" id="nav-tco">
+      <span class="nav-icon">💰</span> TCO Calculator
+    </div>
+    <div class="nav-item" onclick="showPage('results')" id="nav-results">
+      <span class="nav-icon">📊</span> Results & Export
+    </div>
+  </div>
+  <div class="sidebar-section">
+    <div class="sidebar-section-label">Reference</div>
+    <div class="nav-item" onclick="showPage('assumptions')" id="nav-assumptions">
+      <span class="nav-icon">📐</span> Formulas & Assumptions
+    </div>
+  </div>
+  <div class="sidebar-footer">
+    <strong>Enterprise AI InfraCalc v1.0</strong>
+    For planning estimates only. Not a binding quote.
+  </div>
+</nav>
+
+<!-- MAIN CONTENT -->
+<div class="main-content">
+  <!-- TOP BAR -->
+  <div class="topbar">
+    <button class="mobile-menu-btn" onclick="openSidebar()">☰</button>
+    <div class="topbar-title">
+      <h1 id="pageTitle">Getting Started</h1>
+      <p id="pageSubtitle">Configure your AI infrastructure planning analysis</p>
+    </div>
+    <div class="topbar-actions">
+      <button class="theme-toggle" onclick="toggleTheme()" title="Toggle dark/light mode" id="themeToggle">🌙</button>
+      <button class="btn btn-secondary" onclick="printReport()" title="Export PDF"><span class="btn-label-icon">⬇</span><span class="btn-label-full"> Export PDF</span></button>
+      <button class="btn btn-primary" onclick="showPage('results')" title="View Results"><span class="btn-label-full">View Results </span><span class="btn-label-icon">→</span></button>
+    </div>
+  </div>
+
+  <!-- PAGE CONTENT WRAPPER -->
+  <div class="page-content">
+
+<!-- ===================== PAGE: GETTING STARTED ===================== -->
+<div class="page active" id="page-help">
+  <div class="help-hero">
+    <div class="big-icon">🏗️</div>
+    <h2>Enterprise AI Infrastructure Planning</h2>
+    <p>Estimate GPU requirements, compare on-premises and cloud costs, and generate executive-ready infrastructure sizing reports for your GenAI workloads.</p>
+  </div>
+
+  <div class="help-steps">
+    <div class="help-step" onclick="showPage('sizing')">
+      <div class="step-num">1</div>
+      <h4>GenAI GPU Sizing</h4>
+      <p>Configure your model, workload parameters, and GPU type to estimate infrastructure requirements.</p>
+    </div>
+    <div class="help-step" onclick="showPage('tco')">
+      <div class="step-num">2</div>
+      <h4>TCO Calculator</h4>
+      <p>Compare total cost of ownership for on-premises deployment versus cloud IaaS options.</p>
+    </div>
+    <div class="help-step" onclick="showPage('results')">
+      <div class="step-num">3</div>
+      <h4>View Results</h4>
+      <p>Review consolidated sizing, cost analysis, and key assumptions in an exportable summary.</p>
+    </div>
+    <div class="help-step" onclick="showPage('assumptions')">
+      <div class="step-num">4</div>
+      <h4>Formulas & Assumptions</h4>
+      <p>Understand the calculation methodology, formula sources, and planning limitations.</p>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      <div class="card-header-icon">⚡</div>
+      <div><h3>Supported Configurations</h3><p>Models, GPUs, and cloud providers included in v1.0</p></div>
+    </div>
+    <div class="card-body">
+      <div class="form-row three">
+        <div>
+          <div class="form-section-title">Model Families</div>
+          <div style="font-size:12px;color:var(--text-secondary);line-height:2;">
+            🦙 Llama 3 (8B, 70B, 405B)<br>
+            🌊 Mistral 7B<br>
+            🎭 Mixtral 8x7B<br>
+            🧠 DeepSeek-R1 (7B, 67B)<br>
+            ⚙️ Custom / Manual Entry
+          </div>
+        </div>
+        <div>
+          <div class="form-section-title">GPU Hardware</div>
+          <div style="font-size:12px;color:var(--text-secondary);line-height:2;">
+            <span class="badge badge-red">AMD</span> MI300X (192 GB HBM3)<br>
+            <span class="badge badge-red">AMD</span> MI325X (256 GB HBM3E)<br>
+            <span class="badge badge-red">AMD</span> MI350X (288 GB HBM3E)<br>
+            <span class="badge" style="background:rgba(118,185,0,0.12);color:#5a8f00;">NVIDIA</span> H100 SXM (80 GB)<br>
+            <span class="badge" style="background:rgba(118,185,0,0.12);color:#5a8f00;">NVIDIA</span> H200 SXM (141 GB)
+          </div>
+        </div>
+        <div>
+          <div class="form-section-title">Cloud Providers (TCO)</div>
+          <div style="font-size:12px;color:var(--text-secondary);line-height:2;">
+            ☁️ Azure (ND MI300X v5 instances)<br>
+            ☁️ DigitalOcean (MI300X on-demand & reserved)<br>
+            🏠 On-Premises (custom HW)<br>
+            📊 Break-even & payback analysis
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card" style="margin-top:16px;">
+    <div class="card-header">
+      <div class="card-header-icon">📋</div>
+      <div><h3>How to Use This Tool</h3></div>
+    </div>
+    <div class="card-body">
+      <div style="font-size:13px;color:var(--text-secondary);line-height:1.8;">
+        <strong style="color:var(--text-primary);">1. Start with GenAI Sizing</strong> — select a model family and size, configure your workload parameters (concurrent users, token lengths, RPS), choose a GPU type, and review the estimated GPU count, memory requirements, and performance metrics.<br><br>
+        <strong style="color:var(--text-primary);">2. Move to TCO Calculator</strong> — sizing outputs auto-populate the TCO inputs. Add on-premises hardware assumptions (server cost, power, facility) and compare against cloud IaaS hourly rates. Set your analysis period (1–5 years) and review cost breakdown, break-even timing, and savings percentage.<br><br>
+        <strong style="color:var(--text-primary);">3. Review Results</strong> — the Results page consolidates your sizing and TCO findings into an executive summary with key assumptions flagged. Use the Export PDF button to generate a print-ready report.<br><br>
+        <strong style="color:var(--text-primary);">4. Adjust Assumptions</strong> — all major assumptions are editable. Visit Formulas & Assumptions to understand the calculation methodology and override defaults where you have better data.
+      </div>
+    </div>
+  </div>
+
+  <div class="disclaimer">
+    <strong>⚠️ Planning Estimate Disclaimer:</strong> All calculations in this tool are for planning and directional guidance only. Results are estimates based on published hardware specifications, publicly available model parameters, and industry reference benchmarks. Actual deployment performance, costs, and requirements will vary based on your specific workload characteristics, vendor configurations, negotiated pricing, and operational conditions. This tool does not constitute a binding quote, vendor recommendation, or engineering guarantee. Validate all estimates with your infrastructure vendors before making procurement decisions.
+  </div>
+</div>
+<!-- END: GETTING STARTED -->
+
+
+<!-- ===================== PAGE: GenAI SIZING ===================== -->
+<div class="page" id="page-sizing">
+
+  <!-- Workload Presets -->
+  <div style="margin-bottom:16px;">
+    <div style="font-size:12px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.7px;margin-bottom:8px;">Quick Presets</div>
+    <div class="preset-chips">
+      <div class="chip active" id="preset-chatbot" onclick="applyPreset('chatbot')">💬 Customer Chatbot</div>
+      <div class="chip" id="preset-codeassist" onclick="applyPreset('codeassist')">💻 Code Assistant</div>
+      <div class="chip" id="preset-rag" onclick="applyPreset('rag')">📚 RAG / Document QA</div>
+      <div class="chip" id="preset-summarization" onclick="applyPreset('summarization')">📝 Batch Summarization</div>
+      <div class="chip" id="preset-custom" onclick="applyPreset('custom')">⚙️ Custom</div>
+    </div>
+  </div>
+
+  <div class="calc-grid">
+    <!-- INPUTS COLUMN -->
+    <div class="calc-inputs">
+
+      <!-- Model Configuration -->
+      <div class="card">
+        <div class="card-header">
+          <div class="card-header-icon">🧠</div>
+          <div><h3>Model Configuration</h3><p>Select a foundation model or enter custom parameters</p></div>
+        </div>
+        <div class="card-body">
+          <div class="form-section">
+            <div class="form-section-title">Model Selection</div>
+            <div class="form-row">
+              <div class="form-group">
+                <label>Model Family</label>
+                <select id="modelFamily" onchange="onModelFamilyChange()">
+                  <option value="llama3">Llama 3 (Meta)</option>
+                  <option value="mistral">Mistral</option>
+                  <option value="mixtral">Mixtral (MoE)</option>
+                  <option value="deepseek">DeepSeek-R1</option>
+                  <option value="custom">Custom / Manual</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>Model Size</label>
+                <select id="modelSize" onchange="onModelSizeChange()">
+                  <option value="llama3-8b">Llama 3 8B</option>
+                  <option value="llama3-70b">Llama 3 70B</option>
+                  <option value="llama3-405b">Llama 3 405B</option>
+                </select>
+              </div>
+            </div>
+
+            <div id="customModelInputs" style="display:none;">
+              <div class="alert alert-info" style="margin-bottom:12px;">
+                <span class="alert-icon">ℹ️</span>
+                <span>Enter your model's parameter count and architecture details for a custom sizing estimate.</span>
+              </div>
+              <div class="form-row three">
+                <div class="form-group">
+                  <label>Parameters (B)
+                    <span class="tooltip-wrap"><span class="tooltip-icon">?</span><span class="tooltip-box">Total model parameter count in billions (e.g., 7 for a 7B model, 70 for 70B)</span></span>
+                  </label>
+                  <div class="has-unit" style="position:relative">
+                    <input type="number" id="customParams" value="7" min="1" max="1000" onchange="recalculate()">
+                    <span class="unit-label">B</span>
+                  </div>
+                </div>
+                <div class="form-group">
+                  <label>Hidden Dim
+                    <span class="tooltip-wrap"><span class="tooltip-icon">?</span><span class="tooltip-box">Model hidden dimension size (d_model). Used for KV cache calculation. Common: 4096 (7B), 8192 (70B)</span></span>
+                  </label>
+                  <input type="number" id="customHiddenDim" value="4096" min="512" max="32768" onchange="recalculate()">
+                </div>
+                <div class="form-group">
+                  <label>Num Layers
+                    <span class="tooltip-wrap"><span class="tooltip-icon">?</span><span class="tooltip-box">Number of transformer layers. Common: 32 (7B), 80 (70B)</span></span>
+                  </label>
+                  <input type="number" id="customNumLayers" value="32" min="1" max="200" onchange="recalculate()">
+                </div>
+              </div>
+              <div class="form-row three">
+                <div class="form-group">
+                  <label>Num KV Heads
+                    <span class="tooltip-wrap"><span class="tooltip-icon">?</span><span class="tooltip-box">Number of key-value attention heads. GQA models use fewer than full attention heads.</span></span>
+                  </label>
+                  <input type="number" id="customKVHeads" value="8" min="1" max="128" onchange="recalculate()">
+                </div>
+                <div class="form-group">
+                  <label>Head Dim</label>
+                  <input type="number" id="customHeadDim" value="128" min="32" max="256" onchange="recalculate()">
+                </div>
+                <div class="form-group">
+                  <label>Vocab Size</label>
+                  <input type="number" id="customVocabSize" value="32000" min="1000" max="256000" onchange="recalculate()">
+                </div>
+              </div>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label>Weight Precision
+                  <span class="tooltip-wrap"><span class="tooltip-icon">?</span><span class="tooltip-box">Bytes per parameter: FP16/BF16 = 2B, FP8 = 1B, INT8 = 1B, INT4 = 0.5B. Lower precision reduces memory but may affect quality.</span></span>
+                </label>
+                <select id="weightPrecision" onchange="recalculate()">
+                  <option value="2">BF16 / FP16 (2 B/param)</option>
+                  <option value="1">FP8 / INT8 (1 B/param)</option>
+                  <option value="0.5">INT4 (0.5 B/param)</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>KV Cache Precision
+                  <span class="tooltip-wrap"><span class="tooltip-icon">?</span><span class="tooltip-box">Precision used for key-value cache tensors. FP16/BF16 is standard; FP8 reduces memory by ~50%.</span></span>
+                </label>
+                <select id="kvPrecision" onchange="recalculate()">
+                  <option value="2">FP16 / BF16 (2 B/element)</option>
+                  <option value="1">FP8 (1 B/element)</option>
+                </select>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Workload Parameters -->
+      <div class="card" style="margin-top:16px;">
+        <div class="card-header">
+          <div class="card-header-icon">📊</div>
+          <div><h3>Workload Parameters</h3><p>Define your serving requirements and traffic profile</p></div>
+        </div>
+        <div class="card-body">
+          <div class="form-section">
+            <div class="form-section-title">Traffic & Concurrency</div>
+            <div class="form-row three">
+              <div class="form-group">
+                <label>Concurrent Requests
+                  <span class="tooltip-wrap"><span class="tooltip-icon">?</span><span class="tooltip-box">Maximum simultaneous in-flight inference requests. Determines KV cache memory requirements.</span></span>
+                </label>
+                <input type="number" id="concurrentReqs" value="32" min="1" max="2048" onchange="recalculate()">
+              </div>
+              <div class="form-group">
+                <label>Target RPS
+                  <span class="tooltip-wrap"><span class="tooltip-icon">?</span><span class="tooltip-box">Peak requests per second your system must handle. Used to validate throughput headroom.</span></span>
+                </label>
+                <input type="number" id="targetRPS" value="10" min="0.1" max="10000" step="0.1" onchange="recalculate()">
+              </div>
+              <div class="form-group">
+                <label>GPU Utilization Target %
+                  <span class="tooltip-wrap"><span class="tooltip-icon">?</span><span class="tooltip-box">Target GPU memory utilization. 80–85% recommended to allow headroom for dynamic batching and overhead.</span></span>
+                </label>
+                <input type="number" id="gpuUtilTarget" value="85" min="50" max="100" onchange="recalculate()">
+              </div>
+            </div>
+            <div class="form-row three">
+              <div class="form-group">
+                <label>Avg Input Tokens
+                  <span class="tooltip-wrap"><span class="tooltip-icon">?</span><span class="tooltip-box">Average prompt/input length per turn in tokens. 1 token ≈ 0.75 words. For multi-turn chat, this is per single exchange — the Conversation Depth multiplier below computes the full accumulated context.</span></span>
+                </label>
+                <input type="number" id="inputTokens" value="512" min="1" max="128000" onchange="recalculate()">
+              </div>
+              <div class="form-group">
+                <label>Avg Output Tokens
+                  <span class="tooltip-wrap"><span class="tooltip-icon">?</span><span class="tooltip-box">Average response/output length per turn in tokens. Determines generation compute and throughput requirements.</span></span>
+                </label>
+                <input type="number" id="outputTokens" value="256" min="1" max="32000" onchange="recalculate()">
+              </div>
+              <div class="form-group">
+                <label>Redundancy Factor
+                  <span class="tooltip-wrap"><span class="tooltip-icon">?</span><span class="tooltip-box">Multiply GPU count for HA/fault tolerance. 1.0 = no redundancy, 2.0 = full N+N redundancy, 1.25 = N+25% spare.</span></span>
+                </label>
+                <input type="number" id="redundancyFactor" value="1.25" min="1" max="3" step="0.05" onchange="recalculate()">
+              </div>
+            </div>
+
+            <!-- Conversation Depth -->
+            <div style="border:1px solid var(--border);border-radius:var(--radius);padding:12px 14px;background:var(--bg-section);margin-top:4px;">
+              <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
+                <span style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;color:var(--text-muted);">Multi-Turn Conversation Depth</span>
+                <span class="tooltip-wrap"><span class="tooltip-icon">?</span><span class="tooltip-box">For multi-turn chat, KV cache accumulates across turns. A user on turn 10 of a conversation holds 10× more context than turn 1. Set depth = 1 for stateless/single-turn workloads (RAG, batch). Set to your expected avg conversation turns for chatbot deployments.</span></span>
+              </div>
+              <div class="form-row">
+                <div class="form-group">
+                  <label>Conversation Depth (avg turns)
+                    <span class="tooltip-wrap"><span class="tooltip-icon">?</span><span class="tooltip-box">Average number of turns in an active conversation. Each turn accumulates (inputTokens + outputTokens) in the KV cache. Turn 1 = stateless. Turn 10 = 10× context in memory per concurrent user.</span></span>
+                  </label>
+                  <input type="number" id="convDepth" value="1" min="1" max="100" step="1" onchange="recalculate()">
+                  <div class="input-hint" style="margin-top:4px;">1 = single-turn / stateless &nbsp;|&nbsp; &gt;1 = multi-turn chat</div>
+                </div>
+                <div class="form-group">
+                  <label>Effective Context per User</label>
+                  <div style="padding:8px 11px;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);font-size:13px;font-weight:700;color:var(--text-primary);display:flex;align-items:center;justify-content:space-between;">
+                    <span id="res-effectiveContext">—</span>
+                    <span style="font-size:11px;font-weight:400;color:var(--text-muted);">tokens</span>
+                  </div>
+                  <div class="input-hint" style="margin-top:4px;">= (input + output) × depth — KV cache per slot</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- GPU & Hardware -->
+      <div class="card" style="margin-top:16px;">
+        <div class="card-header">
+          <div class="card-header-icon">🔧</div>
+          <div style="flex:1;"><h3>GPU & Hardware Selection</h3><p>Choose target GPU or compare across hardware</p></div>
+        </div>
+        <div class="card-body">
+
+          <!-- Mode toggle -->
+          <div style="margin-bottom:14px;">
+            <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.7px;color:var(--text-muted);margin-bottom:8px;">Results Mode</div>
+            <div class="seg-control" style="max-width:320px;">
+              <button class="seg-btn active" id="mode-single" onclick="setGPUMode('single')">⚡ Single GPU Sizing</button>
+              <button class="seg-btn" id="mode-compare" onclick="setGPUMode('compare')">⚖️ Compare Hardware</button>
+            </div>
+          </div>
+
+          <!-- SINGLE mode: original radio list -->
+          <div id="gpu-single-select">
+            <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.7px;color:var(--text-muted);margin-bottom:8px;">Select GPU</div>
+            <div id="gpuOptions"><!-- Populated by JS --></div>
+          </div>
+
+          <!-- COMPARE mode: checkbox multi-select -->
+          <div id="gpu-compare-select" style="display:none;">
+            <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.7px;color:var(--text-muted);margin-bottom:8px;">Select GPUs to Compare <span style="font-weight:400;color:var(--text-muted);">(choose 2–5)</span></div>
+            <div id="gpuCompareOptions"><!-- Populated by JS --></div>
+          </div>
+
+          <div class="collapsible" id="advHardware" style="margin-top:14px;">
+            <div class="collapsible-header" onclick="toggleCollapsible('advHardware')">
+              ⚙️ Advanced Hardware Assumptions
+              <span class="collapsible-arrow">▼</span>
+            </div>
+            <div class="collapsible-body">
+              <div class="form-row">
+                <div class="form-group">
+                  <label>GPUs per Server
+                    <span class="tooltip-wrap"><span class="tooltip-icon">?</span><span class="tooltip-box">Number of GPUs in each server node. MI300X/H100 servers typically ship with 8 GPUs.</span></span>
+                  </label>
+                  <select id="gpusPerServer" onchange="recalculate()">
+                    <option value="4">4 GPUs/server</option>
+                    <option value="8" selected>8 GPUs/server</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label>GPU Efficiency Factor
+                    <span class="tooltip-wrap"><span class="tooltip-icon">?</span><span class="tooltip-box">Effective utilization of peak BF16 TFLOPS for LLM inference. Typically 30–45% of peak due to memory bandwidth bottleneck.</span></span>
+                  </label>
+                  <input type="number" id="gpuEfficiency" value="0.35" min="0.1" max="0.95" step="0.01" onchange="recalculate()">
+                </div>
+              </div>
+              <div class="form-row">
+                <div class="form-group">
+                  <label>GPU Memory Overhead %
+                    <span class="tooltip-wrap"><span class="tooltip-icon">?</span><span class="tooltip-box">Reserved GPU memory for framework, CUDA runtime, activations, and OS. Typically 5–10%.</span></span>
+                  </label>
+                  <input type="number" id="memOverhead" value="8" min="2" max="20" onchange="recalculate()">
+                </div>
+                <div class="form-group">
+                  <label>Tensor Parallelism Degree
+                    <span class="tooltip-wrap"><span class="tooltip-icon">?</span><span class="tooltip-box">Number of GPUs to split model weights across. Reduces per-GPU memory but adds communication overhead. Usually set to minimum GPUs needed to fit the model.</span></span>
+                  </label>
+                  <input type="number" id="tensorParallel" value="1" min="1" max="8" onchange="recalculate()">
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- END calc-inputs -->
+
+    <!-- RESULTS COLUMN (sticky) — switches between single and compare views -->
+    <div class="calc-results">
+
+      <!-- ── SINGLE MODE results ── -->
+      <div id="results-single-panel" class="card">
+        <div class="card-header">
+          <div class="card-header-icon">📈</div>
+          <div><h3>Sizing Results</h3><p id="sizingResultSubtitle">Results update as you configure inputs</p></div>
+        </div>
+        <div class="card-body">
+          <div class="metric-grid">
+            <div class="metric-card primary">
+              <div class="metric-label">Min GPUs Required</div>
+              <div class="metric-value highlight" id="res-minGPUs">—</div>
+              <div class="metric-unit">GPUs (memory-bound)</div>
+            </div>
+            <div class="metric-card primary">
+              <div class="metric-label">Recommended GPUs</div>
+              <div class="metric-value highlight" id="res-recGPUs">—</div>
+              <div class="metric-unit">incl. redundancy + util target</div>
+            </div>
+            <div class="metric-card">
+              <div class="metric-label">Servers Required</div>
+              <div class="metric-value" id="res-servers">—</div>
+              <div class="metric-unit" id="res-serversUnit">@ 8 GPUs/server</div>
+            </div>
+            <div class="metric-card">
+              <div class="metric-label">Total GPU Memory</div>
+              <div class="metric-value" id="res-totalMem">—</div>
+              <div class="metric-unit">GB (available)</div>
+            </div>
+          </div>
+
+          <div class="form-section-title" style="margin-top:6px;">Memory Breakdown</div>
+          <div id="memBreakdown">
+            <div class="progress-wrap">
+              <div class="progress-label"><span>Model Weights</span><span id="res-modelMem">—</span></div>
+              <div class="progress-bar"><div class="progress-fill" id="bar-modelMem" style="width:0%;background:var(--amd-red)"></div></div>
+            </div>
+            <div class="progress-wrap" style="margin-top:8px;">
+              <div class="progress-label"><span>KV Cache</span><span id="res-kvMem">—</span></div>
+              <div class="progress-bar"><div class="progress-fill" id="bar-kvMem" style="width:0%;background:var(--accent-blue)"></div></div>
+            </div>
+            <div class="progress-wrap" style="margin-top:8px;">
+              <div class="progress-label"><span>Framework Overhead</span><span id="res-overheadMem">—</span></div>
+              <div class="progress-bar"><div class="progress-fill" id="bar-overheadMem" style="width:0%;background:var(--accent-amber)"></div></div>
+            </div>
+          </div>
+
+          <div class="form-section-title" style="margin-top:16px;">Performance Estimates</div>
+          <table class="data-table">
+            <tr><td>Est. Throughput (Output TPS)</td><td class="val" id="res-tps">—</td></tr>
+            <tr><td>Time-to-First-Token (TTFT)</td><td class="val" id="res-ttft">—</td></tr>
+            <tr><td>Time-per-Output-Token (TPOT)</td><td class="val" id="res-tpot">—</td></tr>
+            <tr><td>End-to-End Latency (p50)</td><td class="val" id="res-e2e">—</td></tr>
+            <tr><td>GPU Memory Utilization</td><td class="val" id="res-memUtil">—</td></tr>
+          </table>
+
+          <div class="form-section-title" style="margin-top:16px;">System Efficiency Metrics</div>
+          <div class="metric-grid" style="margin-bottom:6px;">
+            <div class="metric-card full">
+              <div class="metric-label">Tokens / sec / Watt
+                <span class="tooltip-wrap"><span class="tooltip-icon">?</span><span class="tooltip-box">Output throughput normalized by total GPU power draw. Higher = more energy-efficient inference.</span></span>
+              </div>
+              <div class="metric-value" id="res-tpsPerWatt">—</div>
+              <div class="metric-unit">tok/s/W</div>
+            </div>
+          </div>
+          <table class="data-table">
+            <tr><td>Total GPU Power Draw</td><td class="val" id="res-totalWatts">—</td></tr>
+          </table>
+
+          <div id="sizingAlerts" style="margin-top:10px;"></div>
+
+          <div style="margin-top:14px;">
+            <button class="btn btn-primary" style="width:100%;" onclick="showPage('tco')">Continue to TCO Calculator →</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── COMPARE MODE results ── -->
+      <div id="results-compare-panel" style="display:none;">
+        <div class="card">
+          <div class="card-header">
+            <div class="card-header-icon">⚖️</div>
+            <div><h3>Hardware Comparison</h3><p id="compareSubtitle">Select GPUs to compare sizing results side-by-side</p></div>
+          </div>
+          <div class="card-body" style="padding:0;">
+            <div id="compareEmptyState" style="padding:32px;text-align:center;color:var(--text-muted);font-size:13px;">
+              <div style="font-size:32px;margin-bottom:10px;">⚖️</div>
+              Select 2 or more GPUs on the left to see a side-by-side comparison
+            </div>
+            <div id="compareTable" style="display:none;overflow-x:auto;">
+              <table class="data-table" id="compareTableEl" style="min-width:100%;">
+                <!-- Populated by JS -->
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- Compare: per-metric bar charts -->
+        <div class="card" id="compareChartCard" style="margin-top:14px;display:none;">
+          <div class="card-header">
+            <div class="card-header-icon">📊</div>
+            <div><h3>Metric Comparison Charts</h3></div>
+          </div>
+          <div class="card-body">
+            <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.7px;color:var(--text-muted);margin-bottom:6px;">Recommended GPUs Required</div>
+            <div style="height:130px;"><canvas id="compareGPUChart"></canvas></div>
+            <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.7px;color:var(--text-muted);margin:14px 0 6px;">Output Throughput (Tok/s)</div>
+            <div style="height:130px;"><canvas id="compareTPSChart"></canvas></div>
+            <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.7px;color:var(--text-muted);margin:14px 0 6px;">Est. End-to-End Latency (ms)</div>
+            <div style="height:130px;"><canvas id="compareLatencyChart"></canvas></div>
+            <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.7px;color:var(--text-muted);margin:14px 0 6px;">Energy Efficiency — Tokens/sec/Watt</div>
+            <div style="height:130px;"><canvas id="compareEfficiencyChart"></canvas></div>
+          </div>
+        </div>
+
+        <div style="margin-top:14px;">
+          <button class="btn btn-primary" style="width:100%;" onclick="showPage('tco')">Continue to TCO Calculator →</button>
+        </div>
+      </div>
+
+    </div><!-- END calc-results -->
+
+  </div><!-- END calc-grid -->
+
+  <!-- Sizing Assumptions Section — collapsible -->
+  <div class="card" style="margin-top:20px;">
+    <div class="card-header" style="cursor:pointer;user-select:none;" onclick="toggleSizingAssumptions()">
+      <div class="card-header-icon">📐</div>
+      <div style="flex:1;"><h3>Calculation Assumptions</h3><p>Formulas and defaults used in this estimate</p></div>
+      <span id="sizingAssumptionsArrow" style="font-size:11px;color:var(--text-muted);margin-left:8px;transition:transform 0.2s;display:inline-block;">▲</span>
+    </div>
+    <div id="sizingAssumptionsBody" class="card-body">
+      <div class="form-section-title">Memory Formulas</div>
+      <div class="formula-box">
+[1] Model Weights Memory (GB) = Params_B × BytesPerParam
+
+[2] KV Cache Memory (GB) = 2 × NumLayers × NumKVHeads × HeadDim × EffectiveContextLen × ConcurrentReqs × KVBytesPerElement / 1e9
+    EffectiveContextLen = (InputTokens + OutputTokens) × ConversationDepth
+    ConversationDepth = 1 (stateless) or avg turns in flight (multi-turn chat)
+
+[3] Total Required (GB) = (WeightsMem + KVMem) × (1 + OverheadFraction)
+      </div>
+
+      <div class="form-section-title" style="margin-top:14px;">Performance Formulas</div>
+      <div class="formula-box">
+[4] Output TPS = GPU_MemBW_TBs × 1e12 / (2 × Params_B × 1e9) × EfficiencyFactor × NumGPUs
+
+[5] TTFT (ms) = InputTokens × 2 × Params_B × 1e9 / (GPU_BF16_TFLOPS × 1e12 × Efficiency × NumGPUs) × 1000
+
+[6] TPOT (ms) = 1000 / (OutputTPS / ConcurrentReqs)
+
+[7] E2E Latency (ms) = TTFT + (OutputTokens × TPOT)
+      </div>
+
+      <div class="form-section-title" style="margin-top:14px;">Efficiency Formula</div>
+      <div class="formula-box">
+[8] Tokens/sec/Watt = OutputTPS / (NumGPUs × GPU_TDP_W)
+      </div>
+
+      <div class="alert alert-info" style="margin-top:12px;">
+        <span class="alert-icon">ℹ️</span>
+        <span>Formulas [4]–[7] use memory-bandwidth-bound decode assumptions. Efficiency factor (default 0.35) accounts for batching overhead and practical MFU. See Formulas & Assumptions page for full derivations.</span>
+      </div>
+    </div>
+  </div>
+
+
+</div>
+<!-- END PAGE: SIZING -->
+
+
+<!-- ===================== PAGE: TCO CALCULATOR ===================== -->
+<div class="page" id="page-tco">
+
+  <div class="calc-grid">
+    <!-- TCO INPUTS -->
+    <div class="calc-inputs">
+
+      <!-- Analysis Setup -->
+      <div class="card">
+        <div class="card-header">
+          <div class="card-header-icon">📅</div>
+          <div><h3>Analysis Configuration</h3><p>Set the scope and GPU configuration for cost comparison</p></div>
+        </div>
+        <div class="card-body">
+          <div class="form-section">
+            <div class="form-section-title">Analysis Period & Scale</div>
+            <div class="form-row">
+              <div class="form-group">
+                <label>Analysis Period
+                  <span class="tooltip-wrap"><span class="tooltip-icon">?</span><span class="tooltip-box">Number of years over which to calculate and compare total cost of ownership.</span></span>
+                </label>
+                <select id="tcoYears" onchange="recalcTCO()">
+                  <option value="1">1 Year</option>
+                  <option value="2">2 Years</option>
+                  <option value="3" selected>3 Years</option>
+                  <option value="4">4 Years</option>
+                  <option value="5">5 Years</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>Number of GPU Servers
+                  <span class="tooltip-wrap"><span class="tooltip-icon">?</span><span class="tooltip-box">Auto-populated from GenAI Sizing results. Edit manually to override.</span></span>
+                </label>
+                <input type="number" id="tcoNumServers" value="4" min="1" max="10000" onchange="recalcTCO()">
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label>GPUs per Server</label>
+                <select id="tcoGPUsPerServer" onchange="recalcTCO()">
+                  <option value="4">4 GPUs/server</option>
+                  <option value="8" selected>8 GPUs/server</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>GPU Type (On-Prem)</label>
+                <select id="tcoGPUType" onchange="onTCOGPUChange()">
+                  <option value="mi300x">AMD MI300X</option>
+                  <option value="mi325x">AMD MI325X</option>
+                  <option value="mi350x">AMD MI350X</option>
+                  <option value="h100">NVIDIA H100 SXM</option>
+                  <option value="h200">NVIDIA H200 SXM</option>
+                </select>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- On-Premises Costs -->
+      <div class="card" style="margin-top:16px;">
+        <div class="card-header">
+          <div class="card-header-icon">🏠</div>
+          <div><h3>On-Premises Cost Inputs</h3><p>Hardware, facility, operations, and software costs</p></div>
+        </div>
+        <div class="card-body">
+          <div class="form-section">
+            <div class="form-section-title">Hardware Costs</div>
+            <div class="form-row">
+              <div class="form-group has-unit">
+                <label>GPU Server Unit Cost
+                  <span class="tooltip-wrap"><span class="tooltip-icon">?</span><span class="tooltip-box">Full server cost including GPUs, CPUs, RAM, NVLink/interconnect, and chassis. Estimate — negotiate with vendor.</span></span>
+                </label>
+                <input type="number" id="serverCost" value="200000" min="10000" max="2000000" step="1000" onchange="recalcTCO()">
+                <span class="unit-label">$</span>
+              </div>
+              <div class="form-group has-unit">
+                <label>Storage Cost (total)
+                  <span class="tooltip-wrap"><span class="tooltip-icon">?</span><span class="tooltip-box">Total shared storage (NAS/SAN) for model weights, datasets, checkpoints. One-time capital cost.</span></span>
+                </label>
+                <input type="number" id="storageCost" value="50000" min="0" max="5000000" step="1000" onchange="recalcTCO()">
+                <span class="unit-label">$</span>
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-group has-unit">
+                <label>Networking Infrastructure</label>
+                <input type="number" id="networkingCost" value="30000" min="0" max="1000000" step="1000" onchange="recalcTCO()">
+                <span class="unit-label">$</span>
+              </div>
+              <div class="form-group has-unit">
+                <label>SW Licensing (annual)
+                  <span class="tooltip-wrap"><span class="tooltip-icon">?</span><span class="tooltip-box">Software licenses: OS, orchestration, ML frameworks, monitoring, support. Annual recurring cost.</span></span>
+                </label>
+                <input type="number" id="swCostAnnual" value="25000" min="0" max="500000" step="1000" onchange="recalcTCO()">
+                <span class="unit-label">$</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="form-section">
+            <div class="form-section-title">Facility & Operations</div>
+            <div class="form-row">
+              <div class="form-group has-unit">
+                <label>Power Cost ($/kWh)
+                  <span class="tooltip-wrap"><span class="tooltip-icon">?</span><span class="tooltip-box">Blended electricity rate including demand charges. US commercial average ≈ $0.10–0.14/kWh. Data center contracts may differ.</span></span>
+                </label>
+                <input type="number" id="powerCostKwh" value="0.10" min="0.01" max="0.50" step="0.01" onchange="recalcTCO()">
+                <span class="unit-label">$/kWh</span>
+              </div>
+              <div class="form-group">
+                <label>PUE (Power Usage Effectiveness)
+                  <span class="tooltip-wrap"><span class="tooltip-icon">?</span><span class="tooltip-box">Ratio of total facility power to IT equipment power. 1.0 = perfect, 1.2 = efficient DC, 1.5 = older facility. Google/hyperscaler ≈ 1.1.</span></span>
+                </label>
+                <input type="number" id="pue" value="1.20" min="1.0" max="2.5" step="0.05" onchange="recalcTCO()">
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-group has-unit">
+                <label>Personnel Cost (annual)
+                  <span class="tooltip-wrap"><span class="tooltip-icon">?</span><span class="tooltip-box">Fully-loaded annual cost for ML infrastructure engineers managing the cluster. Includes salary, benefits, overhead.</span></span>
+                </label>
+                <input type="number" id="personnelCost" value="250000" min="0" max="2000000" step="10000" onchange="recalcTCO()">
+                <span class="unit-label">$</span>
+              </div>
+              <div class="form-group has-unit">
+                <label>Maintenance % of HW/yr
+                  <span class="tooltip-wrap"><span class="tooltip-icon">?</span><span class="tooltip-box">Annual hardware maintenance and support contract cost as percentage of hardware value. Typical: 8–15%.</span></span>
+                </label>
+                <input type="number" id="maintenancePct" value="10" min="0" max="30" step="1" onchange="recalcTCO()">
+                <span class="unit-label">%</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Cloud Costs -->
+      <div class="card" style="margin-top:16px;">
+        <div class="card-header">
+          <div class="card-header-icon">☁️</div>
+          <div><h3>Cloud IaaS Cost Inputs</h3><p>Cloud GPU instance and ancillary service costs</p></div>
+        </div>
+        <div class="card-body">
+          <div class="form-section">
+            <div class="form-section-title">Cloud Configuration</div>
+            <div class="form-row">
+              <div class="form-group">
+                <label>Cloud Provider</label>
+                <select id="cloudProvider" onchange="onCloudProviderChange()">
+                  <option value="azure">Azure</option>
+                  <option value="digitalocean">DigitalOcean</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>Instance Type</label>
+                <select id="cloudInstance" onchange="onCloudInstanceChange()">
+                  <!-- populated by JS -->
+                </select>
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label>Pricing Model</label>
+                <select id="pricingModel" onchange="recalcTCO()">
+                  <option value="1.0">On-Demand</option>
+                  <option value="0.70">1-Year Reserved (est. 30% off)</option>
+                  <option value="0.55">3-Year Reserved (est. 45% off)</option>
+                </select>
+              </div>
+              <div class="form-group has-unit">
+                <label>Enterprise Discount %
+                  <span class="tooltip-wrap"><span class="tooltip-icon">?</span><span class="tooltip-box">Additional negotiated discount on top of standard pricing. Apply if you have an EDP or committed spend agreement.</span></span>
+                </label>
+                <input type="number" id="enterpriseDiscount" value="0" min="0" max="50" onchange="recalcTCO()">
+                <span class="unit-label">%</span>
+              </div>
+            </div>
+          </div>
+          <div class="form-section">
+            <div class="form-section-title">Cloud Ancillary Costs</div>
+            <div class="form-row">
+              <div class="form-group has-unit">
+                <label>Cloud Storage (monthly)
+                  <span class="tooltip-wrap"><span class="tooltip-icon">?</span><span class="tooltip-box">Monthly cost for object storage (S3/GCS/Blob) for model weights, training data, checkpoints. Estimate based on GB × $/GB-month.</span></span>
+                </label>
+                <input type="number" id="cloudStorageMo" value="500" min="0" max="100000" step="100" onchange="recalcTCO()">
+                <span class="unit-label">$/mo</span>
+              </div>
+              <div class="form-group has-unit">
+                <label>Data Transfer (monthly)</label>
+                <input type="number" id="cloudEgressMo" value="200" min="0" max="50000" step="100" onchange="recalcTCO()">
+                <span class="unit-label">$/mo</span>
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-group has-unit">
+                <label>Cloud Support Plan (monthly)
+                  <span class="tooltip-wrap"><span class="tooltip-icon">?</span><span class="tooltip-box">Monthly cost of cloud provider enterprise/business support. AWS Business ≈ 3% of monthly spend.</span></span>
+                </label>
+                <input type="number" id="cloudSupportMo" value="300" min="0" max="20000" step="100" onchange="recalcTCO()">
+                <span class="unit-label">$/mo</span>
+              </div>
+              <div class="form-group has-unit">
+                <label>Cloud Utilization %
+                  <span class="tooltip-wrap"><span class="tooltip-icon">?</span><span class="tooltip-box">Expected hours-per-day the GPU instances are running. 100% = 24×7, 50% = 12 hours/day.</span></span>
+                </label>
+                <input type="number" id="cloudUtilPct" value="100" min="1" max="100" onchange="recalcTCO()">
+                <span class="unit-label">%</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- END calc-inputs -->
+
+    <!-- TCO RESULTS COLUMN -->
+    <div class="calc-results">
+      <div class="card">
+        <div class="card-header">
+          <div class="card-header-icon">💰</div>
+          <div><h3>TCO Comparison</h3><p id="tcoYearsLabel">3-Year Total Cost of Ownership</p></div>
+        </div>
+        <div class="card-body">
+          <div class="metric-grid">
+            <div class="metric-card" id="tco-onprem-card">
+              <div class="metric-label">On-Premises Total</div>
+              <div class="metric-value" id="res-onpremTotal">—</div>
+              <div class="metric-unit" id="res-onpremMo">— /month avg</div>
+            </div>
+            <div class="metric-card" id="tco-cloud-card">
+              <div class="metric-label">Cloud IaaS Total</div>
+              <div class="metric-value" id="res-cloudTotal">—</div>
+              <div class="metric-unit" id="res-cloudMo">— /month avg</div>
+            </div>
+            <div class="metric-card full primary">
+              <div class="metric-label">Recommended Option</div>
+              <div class="metric-value highlight" id="res-recommendation">—</div>
+              <div class="metric-unit" id="res-savingsPct">Configure inputs to compare</div>
+            </div>
+          </div>
+
+          <div class="form-section-title" style="margin-top:14px;">Unit Economics</div>
+          <div class="metric-grid" style="margin-bottom:10px;">
+            <div class="metric-card">
+              <div class="metric-label">On-Prem $/GPU-Hour</div>
+              <div class="metric-value" id="res-onprem-gpuhr">—</div>
+              <div class="metric-unit">amortized total TCO</div>
+            </div>
+            <div class="metric-card">
+              <div class="metric-label">Cloud $/GPU-Hour</div>
+              <div class="metric-value" id="res-cloud-gpuhr">—</div>
+              <div class="metric-unit">effective rate / GPU</div>
+            </div>
+            <div class="metric-card">
+              <div class="metric-label">On-Prem $/1M Tokens</div>
+              <div class="metric-value" id="res-onprem-mtoken">—</div>
+              <div class="metric-unit" id="res-onprem-mtoken-unit">run Sizing first</div>
+            </div>
+            <div class="metric-card">
+              <div class="metric-label">Cloud $/1M Tokens</div>
+              <div class="metric-value" id="res-cloud-mtoken">—</div>
+              <div class="metric-unit" id="res-cloud-mtoken-unit">run Sizing first</div>
+            </div>
+          </div>
+
+          <div class="form-section-title" style="margin-top:6px;">Payback & Break-Even</div>
+          <table class="data-table" style="margin-bottom:12px;">
+            <tr><td>Break-Even Point</td><td class="val" id="res-breakeven">—</td></tr>
+            <tr><td>On-Prem Capital Outlay</td><td class="val" id="res-capex">—</td></tr>
+            <tr><td>Cloud Monthly Run Rate</td><td class="val" id="res-cloudMonthly">—</td></tr>
+            <tr><td>On-Prem Monthly OpEx</td><td class="val" id="res-onpremMonthly">—</td></tr>
+          </table>
+
+          <!-- Tab switcher: Cost Over Time | Cost Breakdown -->
+          <div style="margin-top:14px;">
+            <div class="seg-control" style="margin-bottom:12px;">
+              <button class="seg-btn active" id="tco-tab-chart" onclick="switchTCOTab('chart')">📈 Cost Over Time</button>
+              <button class="seg-btn" id="tco-tab-breakdown" onclick="switchTCOTab('breakdown')">📊 Cost Breakdown</button>
+            </div>
+
+            <!-- Tab: Cost Over Time -->
+            <div id="tco-panel-chart">
+              <div class="chart-wrap"><canvas id="tcoChart"></canvas></div>
+            </div>
+
+            <!-- Tab: Cost Breakdown -->
+            <div id="tco-panel-breakdown" style="display:none;overflow-x:auto;">
+              <table class="data-table" style="min-width:280px;">
+                <thead>
+                  <tr>
+                    <th style="text-align:left;">Cost Category</th>
+                    <th style="text-align:right;">On-Premises</th>
+                    <th style="text-align:right;">Cloud IaaS</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr><td>Hardware (CapEx)</td><td class="val" id="breakdown-hwCapex" style="text-align:right;">—</td><td class="val" style="text-align:right;color:var(--text-muted);">—</td></tr>
+                  <tr><td>Power (over period)</td><td class="val" id="breakdown-power" style="text-align:right;">—</td><td class="val" style="text-align:right;color:var(--text-muted);">—</td></tr>
+                  <tr><td>Personnel (over period)</td><td class="val" id="breakdown-personnel" style="text-align:right;">—</td><td class="val" style="text-align:right;color:var(--text-muted);">—</td></tr>
+                  <tr><td>Maintenance (over period)</td><td class="val" id="breakdown-maintenance" style="text-align:right;">—</td><td class="val" style="text-align:right;color:var(--text-muted);">—</td></tr>
+                  <tr><td>Software (over period)</td><td class="val" id="breakdown-software" style="text-align:right;">—</td><td class="val" style="text-align:right;color:var(--text-muted);">—</td></tr>
+                  <tr><td>Compute (GPU hours)</td><td class="val" style="text-align:right;color:var(--text-muted);">—</td><td class="val" id="breakdown-cloudCompute" style="text-align:right;">—</td></tr>
+                  <tr><td>Storage</td><td class="val" style="text-align:right;color:var(--text-muted);">—</td><td class="val" id="breakdown-cloudStorage" style="text-align:right;">—</td></tr>
+                  <tr><td>Data Transfer</td><td class="val" style="text-align:right;color:var(--text-muted);">—</td><td class="val" id="breakdown-cloudEgress" style="text-align:right;">—</td></tr>
+                  <tr><td>Support</td><td class="val" style="text-align:right;color:var(--text-muted);">—</td><td class="val" id="breakdown-cloudSupport" style="text-align:right;">—</td></tr>
+                  <tr style="border-top:2px solid var(--border);background:var(--bg-section);">
+                    <td style="font-weight:700;color:var(--text-primary);font-size:12px;">Total</td>
+                    <td class="val" id="breakdown-total-onprem" style="text-align:right;font-size:13px;font-weight:800;">—</td>
+                    <td class="val" id="breakdown-total-cloud"  style="text-align:right;font-size:13px;font-weight:800;">—</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <div id="tcoAlerts" style="margin-top:10px;"></div>
+
+          <div style="margin-top:14px;">
+            <button class="btn btn-primary" style="width:100%;" onclick="showPage('results')">View Full Results →</button>
+          </div>
+        </div>
+      </div>
+    </div><!-- END calc-results -->
+
+  </div><!-- END calc-grid -->
+
+  <!-- Sensitivity Analysis — collapsible -->
+  <div class="collapsible" id="sensitivityCollapsible" style="margin-top:16px;">
+    <div class="collapsible-header" onclick="toggleCollapsible('sensitivityCollapsible')">
+      <span style="font-size:15px;margin-right:2px;">⚡</span> Sensitivity Analysis — What-If Scenarios
+      <span style="font-size:11px;color:var(--text-muted);font-weight:400;margin-left:6px;">Power cost &amp; utilization scenarios</span>
+      <span class="collapsible-arrow">▼</span>
+    </div>
+    <div class="collapsible-body">
+      <div class="form-row" style="margin-bottom:16px;">
+        <div class="form-group">
+          <label>Power Cost Multiplier
+            <span class="tooltip-wrap"><span class="tooltip-icon">?</span><span class="tooltip-box">Multiply the base power cost ($/kWh) by this factor to model rising energy prices. 2× = power doubles.</span></span>
+          </label>
+          <input type="number" id="sens-powerMult" value="2" min="1" max="5" step="0.5" onchange="recalcSensitivity()">
+          <div class="input-unit">× base $/kWh</div>
+        </div>
+        <div class="form-group">
+          <label>On-Prem GPU Utilization %
+            <span class="tooltip-wrap"><span class="tooltip-icon">?</span><span class="tooltip-box">Model the impact of lower GPU utilization on your effective cost per token. Lower utilization = higher $/token since the same fixed cost produces fewer tokens.</span></span>
+          </label>
+          <input type="number" id="sens-utilPct" value="50" min="10" max="100" step="5" onchange="recalcSensitivity()">
+          <div class="input-unit">% of 24/7</div>
+        </div>
+      </div>
+
+      <div style="overflow-x:auto;">
+        <table class="data-table" id="sens-table" style="min-width:500px;">
+          <thead>
+            <tr>
+              <th style="text-align:left;width:32%;">Metric</th>
+              <th style="text-align:right;">Base Case</th>
+              <th style="text-align:right;" id="sens-col-power">Power ×2</th>
+              <th style="text-align:right;" id="sens-col-util">50% Utilization</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td style="color:var(--text-secondary);">On-Prem $/GPU-Hour</td>
+              <td class="val" id="sens-base-onprem-gpuhr" style="text-align:right;">—</td>
+              <td class="val" id="sens-pow-onprem-gpuhr"  style="text-align:right;">—</td>
+              <td class="val" id="sens-util-onprem-gpuhr" style="text-align:right;">—</td>
+            </tr>
+            <tr>
+              <td style="color:var(--text-secondary);">On-Prem $/1M Tokens</td>
+              <td class="val" id="sens-base-onprem-mtoken" style="text-align:right;">—</td>
+              <td class="val" id="sens-pow-onprem-mtoken"  style="text-align:right;">—</td>
+              <td class="val" id="sens-util-onprem-mtoken" style="text-align:right;">—</td>
+            </tr>
+            <tr>
+              <td style="color:var(--text-secondary);">Cloud $/GPU-Hour</td>
+              <td class="val" id="sens-base-cloud-gpuhr" style="text-align:right;">—</td>
+              <td class="val" style="text-align:right;color:var(--text-muted);">unchanged</td>
+              <td class="val" style="text-align:right;color:var(--text-muted);">unchanged</td>
+            </tr>
+            <tr>
+              <td style="color:var(--text-secondary);">Cloud $/1M Tokens</td>
+              <td class="val" id="sens-base-cloud-mtoken" style="text-align:right;">—</td>
+              <td class="val" style="text-align:right;color:var(--text-muted);">unchanged</td>
+              <td class="val" id="sens-util-cloud-mtoken" style="text-align:right;">—</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="alert alert-info" style="margin-top:12px;">
+        <span class="alert-icon">ℹ️</span>
+        <span>Power cost changes affect on-premises costs only. Utilization affects $/1M tokens for both (same tokens produced at same cost = fewer tokens per dollar when utilization drops). Cloud $/GPU-Hour is a contract rate — unaffected by either variable.</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="disclaimer" style="margin-top:20px;">
+    <strong>⚠️ TCO Disclaimer:</strong> Cloud pricing data is based on publicly available list prices and may not reflect current rates, regional pricing, committed use discounts, or negotiated agreements. On-premises cost estimates are directional only and exclude facility build-out, cooling infrastructure, and one-time data center provisioning costs. All figures are for planning purposes only.
+  </div>
+</div>
+<!-- END PAGE: TCO -->
+
+
+<!-- ===================== PAGE: RESULTS ===================== -->
+<div class="page" id="page-results">
+
+  <div class="results-hero">
+    <h2 id="results-headline">Analysis Results Summary</h2>
+    <p id="results-subheadline">Configure GenAI Sizing and TCO Calculator to generate your analysis</p>
+    <div class="results-hero-meta">
+      <div><span>GPU Platform</span><strong id="rh-gpu">—</strong></div>
+      <div><span>Model</span><strong id="rh-model">—</strong></div>
+      <div><span>Analysis Period</span><strong id="rh-period">—</strong></div>
+      <div><span>Generated</span><strong id="rh-date">—</strong></div>
+    </div>
+  </div>
+
+  <div class="form-row" style="margin-bottom:20px;">
+    <div>
+      <div class="card">
+        <div class="card-header">
+          <div class="card-header-icon">⚡</div>
+          <div><h3>GenAI Infrastructure Summary</h3></div>
+        </div>
+        <div class="card-body">
+          <div class="metric-grid">
+            <div class="metric-card primary">
+              <div class="metric-label">Recommended GPUs</div>
+              <div class="metric-value highlight" id="r-recGPUs">—</div>
+              <div class="metric-unit">total (with redundancy)</div>
+            </div>
+            <div class="metric-card primary">
+              <div class="metric-label">Server Nodes</div>
+              <div class="metric-value highlight" id="r-servers">—</div>
+              <div class="metric-unit">GPU servers required</div>
+            </div>
+          </div>
+          <table class="data-table">
+            <tr><td>Model</td><td class="val" id="r-model">—</td></tr>
+            <tr><td>Weight Precision</td><td class="val" id="r-precision">—</td></tr>
+            <tr><td>Model Weight Memory</td><td class="val" id="r-modelMem">—</td></tr>
+            <tr><td>KV Cache Memory</td><td class="val" id="r-kvMem">—</td></tr>
+            <tr><td>Concurrent Requests</td><td class="val" id="r-concReqs">—</td></tr>
+            <tr><td>Estimated TPS (output)</td><td class="val" id="r-tps">—</td></tr>
+            <tr><td>TTFT (est.)</td><td class="val" id="r-ttft">—</td></tr>
+            <tr><td>TPOT (est.)</td><td class="val" id="r-tpot">—</td></tr>
+            <tr><td>E2E Latency (est. p50)</td><td class="val" id="r-e2e">—</td></tr>
+          </table>
+        </div>
+      </div>
+    </div>
+    <div>
+      <div class="card">
+        <div class="card-header">
+          <div class="card-header-icon">💰</div>
+          <div><h3>TCO Decision Summary</h3></div>
+        </div>
+        <div class="card-body">
+          <div class="metric-grid">
+            <div class="metric-card">
+              <div class="metric-label">On-Premises TCO</div>
+              <div class="metric-value" id="r-onpremTCO">—</div>
+              <div class="metric-unit" id="r-onpremPeriod">—</div>
+            </div>
+            <div class="metric-card">
+              <div class="metric-label">Cloud IaaS TCO</div>
+              <div class="metric-value" id="r-cloudTCO">—</div>
+              <div class="metric-unit" id="r-cloudPeriod">—</div>
+            </div>
+            <div class="metric-card full primary">
+              <div class="metric-label">Recommendation</div>
+              <div class="metric-value highlight" id="r-recommendation">—</div>
+              <div class="metric-unit" id="r-savings">Complete both calculators to generate recommendation</div>
+            </div>
+          </div>
+          <table class="data-table">
+            <tr><td>Break-Even Point</td><td class="val" id="r-breakeven">—</td></tr>
+            <tr><td>Cloud Provider</td><td class="val" id="r-cloudProvider">—</td></tr>
+            <tr><td>Pricing Model</td><td class="val" id="r-pricingModel">—</td></tr>
+            <tr><td>On-Prem Capital (HW)</td><td class="val" id="r-capex">—</td></tr>
+            <tr><td>On-Prem Monthly OpEx</td><td class="val" id="r-opexMo">—</td></tr>
+            <tr><td>Cloud Monthly Run Rate</td><td class="val" id="r-cloudMo">—</td></tr>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Executive Summary -->
+  <div class="card">
+    <div class="card-header">
+      <div class="card-header-icon">📝</div>
+      <div><h3>Executive Summary</h3><p>Auto-generated narrative based on your configuration</p></div>
+    </div>
+    <div class="card-body">
+      <div id="execSummary" style="font-size:13px;color:var(--text-secondary);line-height:1.9;">
+        Complete GenAI Sizing and TCO Calculator inputs to generate an executive summary.
+      </div>
+    </div>
+  </div>
+
+  <!-- Key Assumptions -->
+  <div class="card" style="margin-top:16px;">
+    <div class="card-header">
+      <div class="card-header-icon">📌</div>
+      <div><h3>Key Assumptions Used in This Analysis</h3></div>
+    </div>
+    <div class="card-body">
+      <table class="data-table">
+        <thead><tr><th>Assumption</th><th>Value Used</th><th>Impact</th></tr></thead>
+        <tbody id="assumptionsTable">
+          <tr><td colspan="3" style="color:var(--text-muted);text-align:center;padding:20px;">Complete calculator inputs to populate assumptions</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Export Actions -->
+  <div class="card" style="margin-top:16px;">
+    <div class="card-header">
+      <div class="card-header-icon">⬇️</div>
+      <div><h3>Export & Share</h3></div>
+    </div>
+    <div class="card-body">
+      <div style="display:flex;gap:12px;flex-wrap:wrap;">
+        <button class="btn btn-primary" onclick="printReport()">🖨️ Export PDF (Print)</button>
+        <button class="btn btn-secondary" onclick="exportJSON()">📄 Download JSON</button>
+        <button class="btn btn-secondary" onclick="copyShareURL()">🔗 Copy Share URL</button>
+        <button class="btn btn-secondary" onclick="resetAll()">🔄 Reset All Inputs</button>
+      </div>
+      <div class="alert alert-info" style="margin-top:14px;">
+        <span class="alert-icon">ℹ️</span>
+        <span>Export PDF opens your browser's print dialog — choose "Save as PDF." All results and charts will be included. Share URL encodes the current configuration into the URL so you can bookmark or share a specific analysis scenario.</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="disclaimer">
+    <strong>⚠️ Estimate Disclaimer:</strong> This report contains planning estimates only and should not be used as a substitute for detailed vendor quotations, capacity planning exercises, or engineering engagements. All GPU performance metrics, hardware specifications, and cloud pricing figures used herein are based on publicly available information and may differ from actual deployment results. AMD Instinct GPU specifications sourced from AMD product pages. NVIDIA specifications from publicly available datasheets. Cloud pricing from published list rates.
+  </div>
+</div>
+<!-- END PAGE: RESULTS -->
+
+<!-- ===================== PAGE: ASSUMPTIONS ===================== -->
+<div class="page" id="page-assumptions">
+
+  <iframe
+    id="formulaIframe"
+    src="InfraCalc_Formula_Guide.html"
+    style="width:100%;height:calc(100vh - 120px);border:none;border-radius:var(--radius);display:block;"
+    title="Formula Reference Guide">
+  </iframe>
+
+</div>
+<!-- END PAGE: ASSUMPTIONS -->
+
+    </div><!-- END page-content -->
+  </div><!-- END main-content -->
+</div><!-- END app-shell -->
+
+<!-- ===== CHATBOT WIDGET ===== -->
+<button id="chat-fab" onclick="toggleChat()" title="Ask the AI Assistant">
+  💬
+  <span class="chat-badge"></span>
+</button>
+
+<div id="chat-panel">
+  <div class="chat-header">
+    <div class="chat-header-icon">🤖</div>
+    <div class="chat-header-info">
+      <strong>InfraCalc Assistant</strong>
+      <span>Ask about sizing, TCO, formulas & results</span>
+    </div>
+    <button class="chat-close-btn" onclick="toggleChat()">✕</button>
+  </div>
+
+  <!-- Access code gate — shown until the correct code is entered -->
+  <div class="chat-gate" id="chat-gate">
+    <div class="chat-gate-icon">🔒</div>
+    <div class="chat-gate-title">Access Code Required</div>
+    <div class="chat-gate-sub">This assistant helps you understand the calculator's results and methodology — it's an explainer, not a predictive tool or general assistant. Enter the access code to begin.</div>
+    <input type="text" id="chat-gate-input" class="chat-gate-input" placeholder="Enter access code"
+      onkeydown="if(event.key==='Enter'){event.preventDefault();submitGateCode();}" autocomplete="off">
+    <div class="chat-gate-error" id="chat-gate-error">Incorrect code. Please try again.</div>
+    <button class="chat-gate-btn" onclick="submitGateCode()">Unlock Chat</button>
+  </div>
+
+  <div class="chat-messages" id="chat-messages"></div>
+
+  <div class="chat-suggestions" id="chat-suggestions">
+    <button class="chat-suggestion-chip" onclick="sendSuggestion(this)">How were the GPUs calculated?</button>
+    <button class="chat-suggestion-chip" onclick="sendSuggestion(this)">Explain my TCO results</button>
+    <button class="chat-suggestion-chip" onclick="sendSuggestion(this)">How is $/GPU-hour calculated?</button>
+    <button class="chat-suggestion-chip" onclick="sendSuggestion(this)">Walk me through $/1M tokens</button>
+    <button class="chat-suggestion-chip" onclick="sendSuggestion(this)">What inputs affect KV cache?</button>
+    <button class="chat-suggestion-chip" onclick="sendSuggestion(this)">When does on-prem make sense?</button>
+  </div>
+
+  <!-- API key fallback row — shown when rate limited -->
+  <div class="chat-key-row" id="chat-key-row">
+    <input type="password" id="chat-key-input" placeholder="Paste your Cerebras API key (csk-...)">
+    <button class="chat-key-save-btn" onclick="saveUserKey()">Save</button>
+  </div>
+
+  <div class="chat-input-row">
+    <textarea id="chat-textarea" placeholder="Ask about the calculator, results, or methodology…" rows="1"
+      onkeydown="chatKeyDown(event)" oninput="autoResize(this)"></textarea>
+    <button class="chat-send-btn" id="chat-send-btn" onclick="sendChatMessage()" title="Send">➤</button>
+  </div>
+</div>
+
+<script>
+// =====================================================================
+// DATA MODELS
+// =====================================================================
+
+const GPU_SPECS = {
+  mi300x:  { name: 'AMD MI300X',    vendor:'AMD',    vram:192, bw:5.3,   bf16tflops:1307,  tdp:750, gpusPerServer:8, estServerCost:200000 },
+  mi325x:  { name: 'AMD MI325X',    vendor:'AMD',    vram:256, bw:6.0,   bf16tflops:1307,  tdp:750, gpusPerServer:8, estServerCost:260000 },
+  mi350x:  { name: 'AMD MI350X',    vendor:'AMD',    vram:288, bw:8.0,   bf16tflops:2614,  tdp:800, gpusPerServer:8, estServerCost:320000 },
+  h100:    { name: 'NVIDIA H100 SXM', vendor:'NVIDIA', vram:80, bw:3.35, bf16tflops:989,   tdp:700, gpusPerServer:8, estServerCost:200000 },
+  h200:    { name: 'NVIDIA H200 SXM', vendor:'NVIDIA', vram:141, bw:4.8, bf16tflops:989,   tdp:700, gpusPerServer:8, estServerCost:250000 },
+};
+
+// Model parameters (layers, kv_heads, head_dim, vocab from public model cards)
+const MODEL_PROFILES = {
+  'llama3-8b':   { label:'Llama 3 8B',    params:8,   layers:32, kvHeads:8,  headDim:128, vocabSize:128256 },
+  'llama3-70b':  { label:'Llama 3 70B',   params:70,  layers:80, kvHeads:8,  headDim:128, vocabSize:128256 },
+  'llama3-405b': { label:'Llama 3 405B',  params:405, layers:126,kvHeads:8,  headDim:128, vocabSize:128256 },
+  'mistral-7b':  { label:'Mistral 7B',    params:7,   layers:32, kvHeads:8,  headDim:128, vocabSize:32000  },
+  'mixtral-8x7b':{ label:'Mixtral 8x7B',  params:47,  layers:32, kvHeads:8,  headDim:128, vocabSize:32000  },
+  'deepseek-7b': { label:'DeepSeek-R1 7B', params:7,  layers:30, kvHeads:32, headDim:128, vocabSize:102400 },
+  'deepseek-67b':{ label:'DeepSeek-R1 67B',params:67, layers:95, kvHeads:8,  headDim:128, vocabSize:102400 },
+};
+
+const MODEL_FAMILY_SIZES = {
+  llama3:   ['llama3-8b','llama3-70b','llama3-405b'],
+  mistral:  ['mistral-7b'],
+  mixtral:  ['mixtral-8x7b'],
+  deepseek: ['deepseek-7b','deepseek-67b'],
+  custom:   [],
+};
+
+const MODEL_SIZE_LABELS = {
+  'llama3-8b':'Llama 3 8B','llama3-70b':'Llama 3 70B','llama3-405b':'Llama 3 405B',
+  'mistral-7b':'Mistral 7B','mixtral-8x7b':'Mixtral 8×7B',
+  'deepseek-7b':'DeepSeek-R1 7B','deepseek-67b':'DeepSeek-R1 67B',
+};
+
+const CLOUD_INSTANCES = {
+  azure: [
+    { id:'nd-mi300x-v5-is',  label:'ND96is_MI300X_v5 (8× MI300X 192GB)',  gpuCount:8, hourly:48.00, gpuType:'MI300X' },
+    { id:'nd-mi300x-v5-isr', label:'ND96isr_MI300X_v5 (8× MI300X 192GB)', gpuCount:8, hourly:48.00, gpuType:'MI300X' },
+  ],
+  digitalocean: [
+    { id:'do-mi300x-1',  label:'MI300X × 1 (on-demand)',            gpuCount:1, hourly:1.99,  gpuType:'MI300X' },
+    { id:'do-mi300x-8',  label:'MI300X × 8 (on-demand)',            gpuCount:8, hourly:15.92, gpuType:'MI300X' },
+    { id:'do-mi300x-8r', label:'MI300X × 8 (12-mo reserved, -25%)', gpuCount:8, hourly:11.94, gpuType:'MI300X' },
+  ],
+};
+
+const PRESETS = {
+  chatbot:       { concurrentReqs:32, inputTokens:512,  outputTokens:256,  targetRPS:10,  redundancyFactor:1.25, convDepth:10 },
+  codeassist:    { concurrentReqs:16, inputTokens:1024, outputTokens:512,  targetRPS:5,   redundancyFactor:1.25, convDepth:5  },
+  rag:           { concurrentReqs:24, inputTokens:2048, outputTokens:512,  targetRPS:8,   redundancyFactor:1.5,  convDepth:1  },
+  summarization: { concurrentReqs:8,  inputTokens:4096, outputTokens:256,  targetRPS:2,   redundancyFactor:1.0,  convDepth:1  },
+  custom:        null,
+};
+
+// =====================================================================
+// STATE
+// =====================================================================
+let sizingResults = null;
+let tcoResults    = null;
+let tcoChartInstance = null;
+
+// =====================================================================
+// UTILITY FUNCTIONS
+// =====================================================================
+function fmt(n, decimals=0) {
+  if (n === null || n === undefined || isNaN(n)) return '—';
+  return n.toLocaleString('en-US', { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
+}
+function fmtGB(n) { return n >= 1 ? fmt(n,1)+' GB' : fmt(n*1024,0)+' MB'; }
+function fmtUSD(n) {
+  if (n >= 1e6) return '$'+fmt(n/1e6,2)+'M';
+  if (n >= 1e3) return '$'+fmt(n/1e3,1)+'K';
+  return '$'+fmt(n,0);
+}
+function fmtMs(ms) {
+  if (ms >= 1000) return fmt(ms/1000,2)+' s';
+  return fmt(ms,0)+' ms';
+}
+function getVal(id, def=0) {
+  const el = document.getElementById(id);
+  if (!el) return def;
+  const v = parseFloat(el.value);
+  return isNaN(v) ? def : v;
+}
+function getStr(id) {
+  const el = document.getElementById(id);
+  return el ? el.value : '';
+}
+
+// =====================================================================
+// SIZING CALCULATIONS
+// =====================================================================
+function calcModelWeightMemGB(params_B, bytesPerParam) {
+  // Weight_Memory_GB = params_B * 1e9 * bytesPerParam / 1e9
+  return params_B * bytesPerParam;
+}
+
+function calcKVCacheMemGB(layers, kvHeads, headDim, contextLen, concReqs, kvBytes) {
+  // KV_Cache_GB = 2 * layers * kvHeads * headDim * contextLen * concReqs * kvBytes / 1e9
+  return (2 * layers * kvHeads * headDim * contextLen * concReqs * kvBytes) / 1e9;
+}
+
+function calcThroughputTPS(bwTBs, params_B, efficiencyFactor) {
+  // TPS = (BW_bytes_per_sec) / (2 * params * bytes_per_param_at_fp16)
+  // = (bwTBs * 1e12) / (2 * params_B * 1e9) * efficiencyFactor
+  return (bwTBs * 1e12) / (2 * params_B * 1e9) * efficiencyFactor;
+}
+
+function calcTTFT_ms(inputTokens, tflops, params_B, efficiencyFactor, numGPUs) {
+  // TTFT = (inputTokens * 2 * params) / (tflops * eff * numGPUs) in seconds, converted to ms
+  // = (inputTokens * 2 * params_B * 1e9) / (tflops * 1e12 * eff * numGPUs) * 1000
+  if (tflops <= 0 || numGPUs <= 0) return 0;
+  return (inputTokens * 2 * params_B * 1e9) / (tflops * 1e12 * efficiencyFactor * numGPUs) * 1000;
+}
+
+function calcTPOT_ms(totalSystemTPS, concurrentReqs) {
+  // TPOT = 1000 / (TPS_per_request_stream)
+  // TPS_per_request = totalSystemTPS / concurrentReqs
+  if (totalSystemTPS <= 0) return 0;
+  const tpsPerReq = totalSystemTPS / concurrentReqs;
+  return 1000 / tpsPerReq;
+}
+
+function runSizingCalc() {
+  const family = getStr('modelFamily');
+  const isCustom = family === 'custom';
+
+  let profile;
+  if (isCustom) {
+    profile = {
+      params:    getVal('customParams', 7),
+      layers:    getVal('customNumLayers', 32),
+      kvHeads:   getVal('customKVHeads', 8),
+      headDim:   getVal('customHeadDim', 128),
+      vocabSize: getVal('customVocabSize', 32000),
+    };
+  } else {
+    const sizeKey = getStr('modelSize');
+    const p = MODEL_PROFILES[sizeKey];
+    if (!p) return null;
+    profile = { params: p.params, layers: p.layers, kvHeads: p.kvHeads, headDim: p.headDim };
+  }
+
+  const bytesPerParam      = getVal('weightPrecision', 2);
+  const kvBytes            = getVal('kvPrecision', 2);
+  const concReqs           = getVal('concurrentReqs', 32);
+  const inputTokens        = getVal('inputTokens', 512);
+  const outputTokens       = getVal('outputTokens', 256);
+  const convDepth          = Math.max(1, getVal('convDepth', 1));
+  const targetRPS          = getVal('targetRPS', 10);
+  const gpuUtilTarget      = getVal('gpuUtilTarget', 85) / 100;
+  const redundancyFactor   = getVal('redundancyFactor', 1.25);
+  const gpusPerServer      = getVal('gpusPerServer', 8);
+  const gpuEfficiency      = getVal('gpuEfficiency', 0.35);
+  const memOverheadPct     = getVal('memOverhead', 8) / 100;
+  const tensorParallel     = getVal('tensorParallel', 1);
+
+  const gpuKey = document.querySelector('#gpuOptions input[name=gpuSel]:checked')?.value || 'mi300x';
+  const gpu = GPU_SPECS[gpuKey];
+
+  // contextLen per turn; effectiveContextLen is the accumulated KV footprint per user slot
+  const contextLen = inputTokens + outputTokens;
+  const effectiveContextLen = contextLen * convDepth;
+
+  // Update effective context display
+  const effCtxEl = document.getElementById('res-effectiveContext');
+  if (effCtxEl) effCtxEl.textContent = effectiveContextLen.toLocaleString();
+
+  // Memory calculations — KV cache uses effectiveContextLen (per-turn × conversation depth)
+  const weightMemGB    = calcModelWeightMemGB(profile.params, bytesPerParam);
+  const kvCacheMemGB   = calcKVCacheMemGB(profile.layers, profile.kvHeads, profile.headDim, effectiveContextLen, concReqs, kvBytes);
+  const overheadMemGB  = (weightMemGB + kvCacheMemGB) * memOverheadPct;
+  const totalRequiredGB = weightMemGB + kvCacheMemGB + overheadMemGB;
+
+  // GPU count
+  const availablePerGPU = gpu.vram * gpuUtilTarget;
+  const minGPUsRaw = Math.ceil(totalRequiredGB / availablePerGPU);
+  const minGPUs    = Math.max(minGPUsRaw, tensorParallel);
+  const recGPUs    = Math.ceil(minGPUs * redundancyFactor);
+  const servers    = Math.ceil(recGPUs / gpusPerServer);
+  const totalVRAM  = recGPUs * gpu.vram;
+
+  // Throughput
+  const tpsPerGPU      = calcThroughputTPS(gpu.bw, profile.params, gpuEfficiency);
+  const totalSystemTPS = tpsPerGPU * recGPUs;
+
+  // Latency
+  const ttft_ms = calcTTFT_ms(inputTokens, gpu.bf16tflops, profile.params, gpuEfficiency, recGPUs);
+  const tpot_ms = calcTPOT_ms(totalSystemTPS, concReqs);
+  const e2e_ms  = ttft_ms + (outputTokens * tpot_ms);
+
+  // Util
+  const memUtil = (totalRequiredGB / totalVRAM) * 100;
+
+  return {
+    profile, gpu, gpuKey, bytesPerParam, kvBytes,
+    weightMemGB, kvCacheMemGB, overheadMemGB, totalRequiredGB,
+    minGPUs, recGPUs, servers, totalVRAM,
+    tpsPerGPU, totalSystemTPS, ttft_ms, tpot_ms, e2e_ms, memUtil,
+    concReqs, inputTokens, outputTokens, targetRPS, gpusPerServer,
+    contextLen, effectiveContextLen, convDepth, tensorParallel, redundancyFactor, gpuUtilTarget,
+    isCustom,
+  };
+}
+
+// =====================================================================
+// TCO CALCULATIONS
+// =====================================================================
+function runTCOCalc() {
+  const years          = getVal('tcoYears', 3);
+  const numServers     = getVal('tcoNumServers', 4);
+  const gpusPerSrv     = getVal('tcoGPUsPerServer', 8);
+  const gpuType        = getStr('tcoGPUType');
+  const serverCost     = getVal('serverCost', 200000);
+  const storageCost    = getVal('storageCost', 50000);
+  const networkingCost = getVal('networkingCost', 30000);
+  const swCostAnnual   = getVal('swCostAnnual', 25000);
+  const powerCostKwh   = getVal('powerCostKwh', 0.10);
+  const pue            = getVal('pue', 1.20);
+  const personnelCost  = getVal('personnelCost', 250000);
+  const maintenancePct = getVal('maintenancePct', 10) / 100;
+  const cloudProvider  = getStr('cloudProvider');
+  const pricingFactor  = getVal('pricingModel', 1.0);
+  const entDiscount    = getVal('enterpriseDiscount', 0) / 100;
+  const cloudStorageMo = getVal('cloudStorageMo', 500);
+  const cloudEgressMo  = getVal('cloudEgressMo', 200);
+  const cloudSupportMo = getVal('cloudSupportMo', 300);
+  const cloudUtilPct   = getVal('cloudUtilPct', 100) / 100;
+
+  const gpu = GPU_SPECS[gpuType] || GPU_SPECS['mi300x'];
+  const numGPUs = numServers * gpusPerSrv;
+
+  // ---- ON-PREM ----
+  const hwCapex = (numServers * serverCost) + storageCost + networkingCost;
+
+  // Power: GPU TDP × count × 8760h × PUE / 1000 = kWh/yr
+  const annualPowerKwh = numGPUs * gpu.tdp * 8760 * pue / 1000;
+  const annualPowerCost = annualPowerKwh * powerCostKwh;
+  const annualMaintenance = hwCapex * maintenancePct;
+
+  const totalOnPrem = hwCapex
+    + (annualPowerCost + personnelCost + annualMaintenance + swCostAnnual) * years;
+
+  const onpremMonthlyOpex = (annualPowerCost + personnelCost + annualMaintenance + swCostAnnual) / 12;
+  const onpremMonthlyTotal = onpremMonthlyOpex + (hwCapex / (years * 12));
+
+  // ---- CLOUD ----
+  const instanceSel = document.getElementById('cloudInstance');
+  const instances = CLOUD_INSTANCES[cloudProvider] || [];
+  const instIdx = instanceSel ? instanceSel.selectedIndex : 0;
+  const inst = instances[instIdx] || instances[0];
+  const baseHourly = inst ? inst.hourly : 32;
+  const instGPUs = inst ? inst.gpuCount : 8;
+  const numInstances = Math.ceil(numGPUs / instGPUs);
+
+  const effectiveHourly = baseHourly * pricingFactor * (1 - entDiscount);
+  const annualCompute = effectiveHourly * numInstances * 8760 * cloudUtilPct;
+  const annualAncillary = (cloudStorageMo + cloudEgressMo + cloudSupportMo) * 12;
+  const totalCloud = (annualCompute + annualAncillary) * years;
+  const cloudMonthly = (annualCompute + annualAncillary) / 12;
+
+  // ---- BREAK-EVEN ----
+  let breakevenMonths = null;
+  const monthlySavings = cloudMonthly - onpremMonthlyOpex;
+  if (monthlySavings > 0) {
+    breakevenMonths = hwCapex / monthlySavings;
+  }
+
+  const savingsPct = totalOnPrem > 0 ? ((totalCloud - totalOnPrem) / totalCloud) * 100 : 0;
+  const recommended = totalOnPrem < totalCloud ? 'On-Premises' : 'Cloud IaaS';
+
+  // ---- UNIT ECONOMICS ----
+  // $/GPU-hour: on-prem = total TCO spread over every GPU-hour in the period
+  const onpremGPUHour = numGPUs > 0 ? totalOnPrem / (numGPUs * years * 8760) : 0;
+  // $/GPU-hour cloud: effective hourly rate divided by GPUs per instance
+  const instGPUCount = inst ? inst.gpuCount : 8;
+  const cloudGPUHour = effectiveHourly / instGPUCount;
+
+  // $/1M tokens: requires sizing results (tokens/sec per GPU × numGPUs × utilization)
+  let onpremPerMToken = null, cloudPerMToken = null;
+  if (sizingResults && sizingResults.tpsPerGPU && sizingResults.tpsPerGPU > 0) {
+    const systemTPS = sizingResults.tpsPerGPU * numGPUs;
+    // Both use same utilization % for apples-to-apples comparison
+    const annualToks = systemTPS * 3600 * 8760 * cloudUtilPct;
+    if (annualToks > 0) {
+      onpremPerMToken = (totalOnPrem / years) / (annualToks / 1e6);
+      cloudPerMToken  = (annualCompute + annualAncillary) / (annualToks / 1e6);
+    }
+  }
+
+  return {
+    years, numServers, numGPUs, gpuType, gpu,
+    hwCapex, annualPowerCost, annualMaintenance, swCostAnnual, personnelCost,
+    totalOnPrem, onpremMonthlyOpex, onpremMonthlyTotal,
+    annualCompute, annualAncillary, totalCloud, cloudMonthly,
+    effectiveHourly, numInstances, inst,
+    breakevenMonths, savingsPct, recommended,
+    cloudProvider, pricingFactor, entDiscount, cloudUtilPct,
+    onpremGPUHour, cloudGPUHour, onpremPerMToken, cloudPerMToken,
+  };
+}
+
+// =====================================================================
+// UI UPDATE FUNCTIONS
+// =====================================================================
+function updateSizingUI(r) {
+  if (!r) return;
+
+  // Main metrics
+  document.getElementById('res-minGPUs').textContent   = fmt(r.minGPUs);
+  document.getElementById('res-recGPUs').textContent   = fmt(r.recGPUs);
+  document.getElementById('res-servers').textContent   = fmt(r.servers);
+  document.getElementById('res-serversUnit').textContent = `@ ${r.gpusPerServer} GPUs/server`;
+  document.getElementById('res-totalMem').textContent  = fmt(r.totalVRAM);
+  document.getElementById('res-tps').textContent       = fmt(r.totalSystemTPS, 0) + ' tok/s';
+  document.getElementById('res-ttft').textContent      = fmtMs(r.ttft_ms);
+  document.getElementById('res-tpot').textContent      = fmtMs(r.tpot_ms);
+  document.getElementById('res-e2e').textContent       = fmtMs(r.e2e_ms);
+  document.getElementById('res-memUtil').textContent   = fmt(r.memUtil, 1) + '%';
+
+  // Memory bars
+  const total = r.weightMemGB + r.kvCacheMemGB + r.overheadMemGB;
+  document.getElementById('res-modelMem').textContent    = fmtGB(r.weightMemGB);
+  document.getElementById('res-kvMem').textContent       = fmtGB(r.kvCacheMemGB);
+  document.getElementById('res-overheadMem').textContent = fmtGB(r.overheadMemGB);
+  document.getElementById('bar-modelMem').style.width    = fmt(total>0?(r.weightMemGB/total*100):0,1)+'%';
+  document.getElementById('bar-kvMem').style.width       = fmt(total>0?(r.kvCacheMemGB/total*100):0,1)+'%';
+  document.getElementById('bar-overheadMem').style.width = fmt(total>0?(r.overheadMemGB/total*100):0,1)+'%';
+
+  // Subtitle
+  const label = r.isCustom ? 'Custom Model' :
+    MODEL_PROFILES[document.getElementById('modelSize')?.value]?.label || 'Model';
+  document.getElementById('sizingResultSubtitle').textContent =
+    `${label} on ${r.gpu.name}`;
+
+  // Alerts
+  const alerts = [];
+  if (r.memUtil > 90) alerts.push({type:'error', msg:'⚠️ Memory utilization exceeds 90%. Increase GPU count or reduce concurrent requests to avoid OOM errors.'});
+  else if (r.memUtil > 80) alerts.push({type:'warn', msg:'⚠️ Memory utilization is above 80%. Monitor closely for OOM risk under burst traffic.'});
+  if (r.e2e_ms > 5000) alerts.push({type:'warn', msg:'End-to-end latency estimate exceeds 5 seconds. Consider increasing GPU count or reducing context length for latency-sensitive applications.'});
+  if (r.totalSystemTPS / r.concReqs < r.targetRPS) alerts.push({type:'warn', msg:`Estimated throughput may not meet target RPS of ${r.targetRPS}. Consider additional GPU servers.`});
+  if (r.weightMemGB > r.gpu.vram) alerts.push({type:'info', msg:`Model weights (${fmtGB(r.weightMemGB)}) exceed a single ${r.gpu.name} GPU. Tensor parallelism is required across ≥${Math.ceil(r.weightMemGB/r.gpu.vram)} GPUs.`});
+  if (r.convDepth > 1) alerts.push({type:'info', msg:`Multi-turn mode: conversation depth ${r.convDepth} turns. Effective context per user = ${r.effectiveContextLen.toLocaleString()} tokens (${r.convDepth}× single-turn). KV cache is ${r.convDepth}× larger than a stateless deployment.`});
+
+  document.getElementById('sizingAlerts').innerHTML = alerts.map(a =>
+    `<div class="alert alert-${a.type}" style="margin-top:6px;"><span>${a.msg}</span></div>`
+  ).join('');
+
+  // ── System Efficiency Metrics ──
+  const totalWatts = r.recGPUs * r.gpu.tdp;
+  const tpsPerWatt = r.totalSystemTPS > 0 ? r.totalSystemTPS / totalWatts : 0;
+  document.getElementById('res-totalWatts').textContent = fmt(totalWatts) + ' W';
+  document.getElementById('res-tpsPerWatt').textContent = fmt(tpsPerWatt, 3);
+
+  sizingResults = r;
+  syncTCOFromSizing(r);
+  updateResultsPage();
+}
+
+function syncTCOFromSizing(r) {
+  const serversEl = document.getElementById('tcoNumServers');
+  if (serversEl) serversEl.value = r.servers;
+  const tcoGPUEl = document.getElementById('tcoGPUType');
+  if (tcoGPUEl) tcoGPUEl.value = r.gpuKey;
+  recalcTCO();
+}
+
+function updateTCOUI(r) {
+  if (!r) return;
+
+  document.getElementById('tcoYearsLabel').textContent = `${r.years}-Year Total Cost of Ownership`;
+  document.getElementById('res-onpremTotal').textContent = fmtUSD(r.totalOnPrem);
+  document.getElementById('res-onpremMo').textContent    = fmtUSD(r.onpremMonthlyTotal)+'/month avg';
+  document.getElementById('res-cloudTotal').textContent  = fmtUSD(r.totalCloud);
+  document.getElementById('res-cloudMo').textContent     = fmtUSD(r.cloudMonthly)+'/month avg';
+
+  // Recommendation
+  const recEl = document.getElementById('res-recommendation');
+  const savEl = document.getElementById('res-savingsPct');
+  if (r.totalOnPrem < r.totalCloud) {
+    recEl.textContent = '🏠 On-Premises';
+    recEl.className = 'metric-value good';
+    const savingsPct = Math.abs(r.savingsPct);
+    savEl.textContent = `${fmt(savingsPct,1)}% lower TCO vs cloud over ${r.years} years`;
+  } else {
+    recEl.textContent = '☁️ Cloud IaaS';
+    recEl.className = 'metric-value highlight';
+    savEl.textContent = `${fmt(Math.abs(r.savingsPct),1)}% lower TCO vs on-prem over ${r.years} years`;
+  }
+
+  // Unit economics
+  const fmtGPUHr = v => v > 0 ? '$' + v.toFixed(2) : '—';
+  document.getElementById('res-onprem-gpuhr').textContent = fmtGPUHr(r.onpremGPUHour);
+  document.getElementById('res-cloud-gpuhr').textContent  = fmtGPUHr(r.cloudGPUHour);
+  const mTokenEl1     = document.getElementById('res-onprem-mtoken');
+  const mTokenEl2     = document.getElementById('res-cloud-mtoken');
+  const mTokenUnit1   = document.getElementById('res-onprem-mtoken-unit');
+  const mTokenUnit2   = document.getElementById('res-cloud-mtoken-unit');
+  const utilLabel     = `${Math.round((r.cloudUtilPct||1)*100)}% util`;
+  if (r.onpremPerMToken !== null) {
+    mTokenEl1.textContent  = '$' + r.onpremPerMToken.toFixed(2);
+    if (mTokenUnit1) mTokenUnit1.textContent = utilLabel;
+  } else {
+    mTokenEl1.textContent  = '—';
+    if (mTokenUnit1) mTokenUnit1.textContent = 'run Sizing first';
+  }
+  if (r.cloudPerMToken !== null) {
+    mTokenEl2.textContent  = '$' + r.cloudPerMToken.toFixed(2);
+    if (mTokenUnit2) mTokenUnit2.textContent = utilLabel;
+  } else {
+    mTokenEl2.textContent  = '—';
+    if (mTokenUnit2) mTokenUnit2.textContent = 'run Sizing first';
+  }
+
+  document.getElementById('res-breakeven').textContent =
+    r.breakevenMonths !== null
+      ? (r.breakevenMonths < 1 ? '<1 month'
+        : r.breakevenMonths > r.years * 12 ? `>${r.years * 12} months (within period)`
+        : `${fmt(r.breakevenMonths,1)} months`)
+      : 'N/A (cloud cheaper from day 1)';
+
+  document.getElementById('res-capex').textContent         = fmtUSD(r.hwCapex);
+  document.getElementById('res-cloudMonthly').textContent  = fmtUSD(r.cloudMonthly)+'/mo';
+  document.getElementById('res-onpremMonthly').textContent = fmtUSD(r.onpremMonthlyOpex)+'/mo';
+
+  // Cost breakdown
+  document.getElementById('breakdown-hwCapex').textContent     = fmtUSD(r.hwCapex);
+  document.getElementById('breakdown-power').textContent       = fmtUSD(r.annualPowerCost * r.years);
+  document.getElementById('breakdown-personnel').textContent   = fmtUSD(r.personnelCost * r.years);
+  document.getElementById('breakdown-maintenance').textContent = fmtUSD(r.annualMaintenance * r.years);
+  document.getElementById('breakdown-software').textContent    = fmtUSD(r.swCostAnnual * r.years);
+  document.getElementById('breakdown-cloudCompute').textContent= fmtUSD(r.annualCompute * r.years);
+  document.getElementById('breakdown-cloudStorage').textContent= fmtUSD(getVal('cloudStorageMo',500)*12*r.years);
+  document.getElementById('breakdown-cloudEgress').textContent = fmtUSD(getVal('cloudEgressMo',200)*12*r.years);
+  document.getElementById('breakdown-cloudSupport').textContent= fmtUSD(getVal('cloudSupportMo',300)*12*r.years);
+
+  // Totals row — highlight the cheaper option in green
+  const totOnpremEl = document.getElementById('breakdown-total-onprem');
+  const totCloudEl  = document.getElementById('breakdown-total-cloud');
+  if (totOnpremEl) {
+    totOnpremEl.textContent = fmtUSD(r.totalOnPrem);
+    totOnpremEl.style.color = r.totalOnPrem <= r.totalCloud ? 'var(--accent-green)' : 'var(--text-primary)';
+  }
+  if (totCloudEl) {
+    totCloudEl.textContent = fmtUSD(r.totalCloud);
+    totCloudEl.style.color = r.totalCloud < r.totalOnPrem ? 'var(--accent-green)' : 'var(--text-primary)';
+  }
+
+  // TCO Chart
+  updateTCOChart(r);
+
+  // Alerts
+  const alerts = [];
+  if (r.breakevenMonths !== null && r.breakevenMonths < 18) {
+    alerts.push({type:'success', msg:`On-premises break-even in ${fmt(r.breakevenMonths,1)} months — strong case for owned infrastructure.`});
+  }
+  if (r.totalCloud < r.totalOnPrem && r.years <= 2) {
+    alerts.push({type:'info', msg:`For short-term workloads (${r.years}yr), cloud may offer lower commitment risk even if TCO is higher.`});
+  }
+  document.getElementById('tcoAlerts').innerHTML = alerts.map(a =>
+    `<div class="alert alert-${a.type}" style="margin-top:6px;"><span>${a.msg}</span></div>`
+  ).join('');
+
+  tcoResults = r;
+  updateResultsPage();
+  recalcSensitivity();
+}
+
+function updateTCOChart(r) {
+  const ctx = document.getElementById('tcoChart');
+  if (!ctx) return;
+
+  const monthlyOpex = r.onpremMonthlyOpex;
+  const cloudMonthly = r.cloudMonthly;
+
+  const labels = [];
+  const onpremCumulative = [];
+  const cloudCumulative  = [];
+
+  for (let m = 0; m <= r.years * 12; m++) {
+    labels.push(m === 0 ? 'Day 0' : `Mo ${m}`);
+    onpremCumulative.push(r.hwCapex + (monthlyOpex * m));
+    cloudCumulative.push(cloudMonthly * m);
+  }
+
+  const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+  const gridColor = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)';
+  const textColor = isDark ? '#94a3b8' : '#64748b';
+
+  if (tcoChartInstance) tcoChartInstance.destroy();
+
+  tcoChartInstance = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [
+        {
+          label: 'On-Premises Cumulative',
+          data: onpremCumulative,
+          borderColor: '#ED1C24',
+          backgroundColor: 'rgba(237,28,36,0.06)',
+          fill: true,
+          tension: 0.3,
+          pointRadius: 0,
+          borderWidth: 2,
+        },
+        {
+          label: 'Cloud IaaS Cumulative',
+          data: cloudCumulative,
+          borderColor: '#2563eb',
+          backgroundColor: 'rgba(37,99,235,0.06)',
+          fill: true,
+          tension: 0.3,
+          pointRadius: 0,
+          borderWidth: 2,
+        },
+      ],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: { intersect: false, mode: 'index' },
+      plugins: {
+        legend: { labels: { color: textColor, font: { size: 11 } } },
+        tooltip: {
+          callbacks: {
+            label: ctx => `${ctx.dataset.label}: ${fmtUSD(ctx.parsed.y)}`
+          }
+        }
+      },
+      scales: {
+        x: {
+          ticks: { color: textColor, font:{size:10}, maxTicksLimit: 8 },
+          grid: { color: gridColor },
+        },
+        y: {
+          ticks: {
+            color: textColor, font:{size:10},
+            callback: v => fmtUSD(v),
+          },
+          grid: { color: gridColor },
+        },
+      },
+    },
+  });
+}
+
+// =====================================================================
+// SENSITIVITY ANALYSIS
+// =====================================================================
+function recalcSensitivity() {
+  const r = tcoResults;
+  const fmtGH = v => v > 0 ? '$' + v.toFixed(2) : '—';
+  const fmtMT = v => v !== null && v > 0 ? '$' + v.toFixed(2) : '—';
+
+  // Update column headers
+  const mult    = getVal('sens-powerMult', 2);
+  const utilPct = getVal('sens-utilPct', 50);
+  const colPow  = document.getElementById('sens-col-power');
+  const colUtil = document.getElementById('sens-col-util');
+  if (colPow)  colPow.textContent  = `Power ×${mult}`;
+  if (colUtil) colUtil.textContent = `${utilPct}% Utilization`;
+
+  if (!r) {
+    // Show placeholders when no TCO has been run yet
+    ['sens-base-onprem-gpuhr','sens-pow-onprem-gpuhr','sens-util-onprem-gpuhr',
+     'sens-base-onprem-mtoken','sens-pow-onprem-mtoken','sens-util-onprem-mtoken',
+     'sens-base-cloud-gpuhr','sens-base-cloud-mtoken','sens-util-cloud-mtoken'
+    ].forEach(id => { const el = document.getElementById(id); if(el) el.textContent='—'; });
+    return;
+  }
+
+  const years  = r.years;
+  const numGPUs = r.numGPUs;
+
+  // ── BASE CASE (same as main TCO results) ──
+  document.getElementById('sens-base-onprem-gpuhr').textContent  = fmtGH(r.onpremGPUHour);
+  document.getElementById('sens-base-cloud-gpuhr').textContent   = fmtGH(r.cloudGPUHour);
+  document.getElementById('sens-base-onprem-mtoken').textContent = fmtMT(r.onpremPerMToken);
+  document.getElementById('sens-base-cloud-mtoken').textContent  = fmtMT(r.cloudPerMToken);
+
+  // ── POWER ×mult SCENARIO ──
+  // Re-derive total on-prem with scaled power cost
+  const powAnnual = r.annualPowerCost * mult;
+  const powTotal  = r.hwCapex + (powAnnual + r.personnelCost + r.annualMaintenance + r.swCostAnnual) * years;
+  const powGPUHr  = numGPUs > 0 ? powTotal / (numGPUs * years * 8760) : 0;
+  document.getElementById('sens-pow-onprem-gpuhr').textContent = fmtGH(powGPUHr);
+
+  // $/1M tokens with power scenario (same token throughput, higher total cost)
+  let powMToken = null;
+  if (r.onpremPerMToken !== null && r.totalOnPrem > 0) {
+    // Scale linearly: (powTotal/r.totalOnPrem) × base $/1M
+    powMToken = r.onpremPerMToken * (powTotal / r.totalOnPrem);
+  }
+  document.getElementById('sens-pow-onprem-mtoken').textContent = fmtMT(powMToken);
+
+  // ── UTILIZATION utilPct% SCENARIO ──
+  // $/GPU-hour on-prem doesn't change (fixed cost ÷ same GPU-hours)
+  document.getElementById('sens-util-onprem-gpuhr').textContent = fmtGH(r.onpremGPUHour);
+
+  // $/1M tokens: utilization affects how many tokens are produced
+  // Fewer tokens produced → higher $/1M token for same total cost
+  const baseUtil = (r.cloudUtilPct || 1);
+  const scenUtil = utilPct / 100;
+  let utilOnpremMToken = null, utilCloudMToken = null;
+  if (r.onpremPerMToken !== null && baseUtil > 0 && scenUtil > 0) {
+    utilOnpremMToken = r.onpremPerMToken * (baseUtil / scenUtil);
+  }
+  if (r.cloudPerMToken !== null && baseUtil > 0 && scenUtil > 0) {
+    utilCloudMToken = r.cloudPerMToken * (baseUtil / scenUtil);
+  }
+  document.getElementById('sens-util-onprem-mtoken').textContent = fmtMT(utilOnpremMToken);
+  document.getElementById('sens-util-cloud-mtoken').textContent  = fmtMT(utilCloudMToken);
+}
+
+// =====================================================================
+// RESULTS PAGE
+// =====================================================================
+function updateResultsPage() {
+  // Hero metadata
+  document.getElementById('rh-date').textContent = new Date().toLocaleDateString('en-US', {month:'short',day:'numeric',year:'numeric'});
+
+  if (sizingResults) {
+    const label = sizingResults.isCustom ? 'Custom Model' :
+      MODEL_PROFILES[document.getElementById('modelSize')?.value]?.label || '—';
+    document.getElementById('rh-gpu').textContent   = sizingResults.gpu.name;
+    document.getElementById('rh-model').textContent = label;
+    document.getElementById('r-recGPUs').textContent = fmt(sizingResults.recGPUs);
+    document.getElementById('r-servers').textContent = fmt(sizingResults.servers);
+    const precLabel = {'2':'BF16/FP16','1':'FP8/INT8','0.5':'INT4'}[getStr('weightPrecision')] || '—';
+    document.getElementById('r-model').textContent    = label;
+    document.getElementById('r-precision').textContent= precLabel;
+    document.getElementById('r-modelMem').textContent = fmtGB(sizingResults.weightMemGB);
+    document.getElementById('r-kvMem').textContent    = fmtGB(sizingResults.kvCacheMemGB);
+    document.getElementById('r-concReqs').textContent = fmt(sizingResults.concReqs);
+    document.getElementById('r-tps').textContent      = fmt(sizingResults.totalSystemTPS,0)+' tok/s';
+    document.getElementById('r-ttft').textContent     = fmtMs(sizingResults.ttft_ms);
+    document.getElementById('r-tpot').textContent     = fmtMs(sizingResults.tpot_ms);
+    document.getElementById('r-e2e').textContent      = fmtMs(sizingResults.e2e_ms);
+  }
+
+  if (tcoResults) {
+    document.getElementById('rh-period').textContent  = tcoResults.years+' Year'+(tcoResults.years>1?'s':'');
+    document.getElementById('r-onpremTCO').textContent= fmtUSD(tcoResults.totalOnPrem);
+    document.getElementById('r-onpremPeriod').textContent = `${tcoResults.years}-year total`;
+    document.getElementById('r-cloudTCO').textContent = fmtUSD(tcoResults.totalCloud);
+    document.getElementById('r-cloudPeriod').textContent  = `${tcoResults.years}-year total`;
+    document.getElementById('r-recommendation').textContent = tcoResults.totalOnPrem < tcoResults.totalCloud ? '🏠 On-Premises' : '☁️ Cloud IaaS';
+    const savingsPct = Math.abs(tcoResults.savingsPct);
+    document.getElementById('r-savings').textContent  = `${fmt(savingsPct,1)}% lower TCO over ${tcoResults.years} years`;
+    document.getElementById('r-breakeven').textContent= tcoResults.breakevenMonths !== null ? fmt(tcoResults.breakevenMonths,1)+' months' : 'N/A';
+    const cloudProvLabel = {'aws':'AWS','azure':'Azure','gcp':'Google Cloud'}[tcoResults.cloudProvider] || tcoResults.cloudProvider;
+    document.getElementById('r-cloudProvider').textContent  = cloudProvLabel;
+    const pricingLabel = {'1.0':'On-Demand','0.70':'1-Year Reserved','0.55':'3-Year Reserved'}[String(tcoResults.pricingFactor)] || 'Custom';
+    document.getElementById('r-pricingModel').textContent   = pricingLabel;
+    document.getElementById('r-capex').textContent    = fmtUSD(tcoResults.hwCapex);
+    document.getElementById('r-opexMo').textContent   = fmtUSD(tcoResults.onpremMonthlyOpex)+'/mo';
+    document.getElementById('r-cloudMo').textContent  = fmtUSD(tcoResults.cloudMonthly)+'/mo';
+  }
+
+  // Executive summary
+  if (sizingResults && tcoResults) {
+    const modelLabel = sizingResults.isCustom ? 'the custom model' :
+      (MODEL_PROFILES[document.getElementById('modelSize')?.value]?.label || 'the selected model');
+    const cheaper = tcoResults.totalOnPrem < tcoResults.totalCloud ? 'on-premises' : 'cloud IaaS';
+    const saving = fmtUSD(Math.abs(tcoResults.totalOnPrem - tcoResults.totalCloud));
+    const breakevenStr = tcoResults.breakevenMonths !== null
+      ? `The on-premises investment breaks even in approximately ${fmt(tcoResults.breakevenMonths,1)} months.`
+      : `Cloud infrastructure is less expensive from day one given the assumed utilization profile.`;
+
+    document.getElementById('execSummary').innerHTML = `
+      This analysis estimates the infrastructure requirements and total cost of ownership for serving
+      <strong>${modelLabel}</strong> on <strong>${sizingResults.gpu.name}</strong> GPUs.
+
+      <br><br>
+      <strong>Infrastructure Sizing:</strong> Supporting ${fmt(sizingResults.concReqs)} concurrent requests
+      at the selected configuration requires a minimum of <strong>${fmt(sizingResults.minGPUs)} GPUs</strong>,
+      or <strong>${fmt(sizingResults.recGPUs)} GPUs</strong> including ${fmt(sizingResults.redundancyFactor,'—',true)}×
+      redundancy factor — deployed across <strong>${fmt(sizingResults.servers)} server nodes</strong>.
+      Total estimated GPU memory available: ${fmt(sizingResults.totalVRAM)} GB.
+      Estimated system throughput is ${fmt(sizingResults.totalSystemTPS,0)} output tokens/second,
+      with ~${fmtMs(sizingResults.ttft_ms)} TTFT and ~${fmtMs(sizingResults.e2e_ms)} end-to-end latency.
+
+      <br><br>
+      <strong>Cost Analysis:</strong> Over a ${tcoResults.years}-year period, the
+      <strong>${cheaper}</strong> deployment option is less expensive by approximately
+      <strong>${saving}</strong>. On-premises total: ${fmtUSD(tcoResults.totalOnPrem)}.
+      Cloud IaaS total: ${fmtUSD(tcoResults.totalCloud)}. ${breakevenStr}
+
+      <br><br>
+      <em>All figures are planning estimates. Validate assumptions with your infrastructure vendors before making procurement decisions.</em>
+    `;
+
+    // Assumptions table
+    const assumptionsData = [
+      ['GPU Efficiency (MFU)', fmt(getVal('gpuEfficiency',0.35)*100,0)+'%', 'Affects throughput and latency estimates significantly'],
+      ['GPU Memory Overhead', fmt(getVal('memOverhead',8),0)+'%', 'Affects minimum GPU count'],
+      ['Redundancy Factor', '×'+fmt(sizingResults.redundancyFactor,2), 'Scales recommended GPU count for HA'],
+      ['Power Usage Effectiveness (PUE)', fmt(getVal('pue',1.2),2), 'Scales total on-prem power cost'],
+      ['Maintenance % of HW', fmt(getVal('maintenancePct',10),0)+'%/yr', 'Recurring on-prem OPEX factor'],
+      ['Cloud Pricing Model', {'1.0':'On-Demand','0.70':'1-Year Reserved','0.55':'3-Year Reserved'}[getStr('pricingModel')]||'On-Demand', 'Multiplier on cloud instance hourly rate'],
+      ['KV Cache Precision', {'2':'FP16/BF16','1':'FP8'}[getStr('kvPrecision')]||'FP16', 'FP8 halves KV cache memory requirements'],
+      ['Concurrent Requests', fmt(sizingResults.concReqs), 'Primary driver of KV cache memory requirements'],
+    ];
+    document.getElementById('assumptionsTable').innerHTML = assumptionsData.map(r =>
+      `<tr><td>${r[0]}</td><td class="val">${r[1]}</td><td style="color:var(--text-muted);font-size:11px;">${r[2]}</td></tr>`
+    ).join('');
+  }
+}
+
+// =====================================================================
+// MAIN RECALCULATE TRIGGERS
+// =====================================================================
+function recalculate() {
+  if (gpuMode === 'compare') {
+    runCompareCalc();
+    return;
+  }
+  const r = runSizingCalc();
+  if (r) updateSizingUI(r);
+}
+
+function recalcTCO() {
+  const r = runTCOCalc();
+  if (r) updateTCOUI(r);
+}
+
+function switchTCOTab(tab) {
+  const isChart = tab === 'chart';
+  document.getElementById('tco-tab-chart').classList.toggle('active', isChart);
+  document.getElementById('tco-tab-breakdown').classList.toggle('active', !isChart);
+  document.getElementById('tco-panel-chart').style.display     = isChart ? '' : 'none';
+  document.getElementById('tco-panel-breakdown').style.display = isChart ? 'none' : '';
+}
+
+// =====================================================================
+// UI INTERACTIONS
+// =====================================================================
+function showPage(pageId) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('page-'+pageId).classList.add('active');
+  document.getElementById('nav-'+pageId).classList.add('active');
+
+  const titles = {
+    help: ['Getting Started', 'Overview and onboarding guide'],
+    sizing: ['GenAI GPU Sizing', 'Estimate GPU count, memory, throughput, and latency'],
+    tco: ['TCO Calculator', 'Compare on-premises and cloud infrastructure costs'],
+    results: ['Results & Export', 'Consolidated analysis summary and export options'],
+    assumptions: ['Formulas & Assumptions', 'Calculation methodology and planning limitations'],
+  };
+  const t = titles[pageId] || ['Enterprise AI InfraCalc', ''];
+  document.getElementById('pageTitle').textContent    = t[0];
+  document.getElementById('pageSubtitle').textContent = t[1];
+
+  if (pageId === 'results') updateResultsPage();
+  closeSidebar();
+}
+
+function onModelFamilyChange() {
+  const family = getStr('modelFamily');
+  const isCustom = family === 'custom';
+  document.getElementById('customModelInputs').style.display = isCustom ? 'block' : 'none';
+
+  const sizeSelect = document.getElementById('modelSize');
+  sizeSelect.style.display = isCustom ? 'none' : '';
+  sizeSelect.innerHTML = '';
+
+  const sizes = MODEL_FAMILY_SIZES[family] || [];
+  sizes.forEach(key => {
+    const opt = document.createElement('option');
+    opt.value = key; opt.textContent = MODEL_SIZE_LABELS[key] || key;
+    sizeSelect.appendChild(opt);
+  });
+
+  recalculate();
+}
+
+function onModelSizeChange() { recalculate(); }
+
+function renderGPUOptions() {
+  const container = document.getElementById('gpuOptions');
+  container.innerHTML = '';
+  Object.entries(GPU_SPECS).forEach(([key, gpu], i) => {
+    const div = document.createElement('label');
+    div.className = 'gpu-option' + (i === 0 ? ' selected' : '');
+    div.innerHTML = `
+      <input type="radio" name="gpuSel" value="${key}" ${i===0?'checked':''} onchange="onGPUChange(this)">
+      <div style="flex:1;">
+        <div class="gpu-option-name">${gpu.name}</div>
+        <div class="gpu-option-specs">${gpu.vram} GB VRAM · ${gpu.bw} TB/s BW · ${gpu.bf16tflops} BF16 TFLOPS · ${gpu.tdp}W TDP</div>
+      </div>
+      <span class="badge ${gpu.vendor==='AMD'?'badge-red':'vendor-nvidia'} gpu-option-badge">${gpu.vendor}</span>
+    `;
+    container.appendChild(div);
+  });
+}
+
+function onGPUChange(el) {
+  document.querySelectorAll('#gpu-single-select .gpu-option').forEach(o => o.classList.remove('selected'));
+  el.closest('.gpu-option').classList.add('selected');
+  const gpu = GPU_SPECS[el.value];
+  document.getElementById('gpusPerServer').value = gpu.gpusPerServer;
+  recalculate();
+}
+
+function onCloudProviderChange() {
+  const provider = getStr('cloudProvider');
+  const instances = CLOUD_INSTANCES[provider] || [];
+  const sel = document.getElementById('cloudInstance');
+  sel.innerHTML = '';
+  instances.forEach(inst => {
+    const opt = document.createElement('option');
+    opt.value = inst.id; opt.textContent = inst.label;
+    sel.appendChild(opt);
+  });
+  recalcTCO();
+}
+
+function onCloudInstanceChange() { recalcTCO(); }
+function onTCOGPUChange() {
+  const gpuType = getStr('tcoGPUType');
+  const gpu = GPU_SPECS[gpuType];
+  if (gpu) document.getElementById('serverCost').value = gpu.estServerCost;
+  recalcTCO();
+}
+
+function applyPreset(name) {
+  document.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
+  document.getElementById('preset-'+name).classList.add('active');
+  const p = PRESETS[name];
+  if (!p) return;
+  document.getElementById('concurrentReqs').value    = p.concurrentReqs;
+  document.getElementById('inputTokens').value       = p.inputTokens;
+  document.getElementById('outputTokens').value      = p.outputTokens;
+  document.getElementById('targetRPS').value         = p.targetRPS;
+  document.getElementById('redundancyFactor').value  = p.redundancyFactor;
+  if (p.convDepth !== undefined) document.getElementById('convDepth').value = p.convDepth;
+  recalculate();
+}
+
+function toggleCollapsible(id) {
+  document.getElementById(id).classList.toggle('open');
+}
+
+// ── Sizing Assumptions collapsible ──
+let sizingAssumptionsOpen = true;
+function toggleSizingAssumptions() {
+  sizingAssumptionsOpen = !sizingAssumptionsOpen;
+  const body  = document.getElementById('sizingAssumptionsBody');
+  const arrow = document.getElementById('sizingAssumptionsArrow');
+  body.style.display  = sizingAssumptionsOpen ? '' : 'none';
+  arrow.style.transform = sizingAssumptionsOpen ? '' : 'rotate(180deg)';
+  arrow.textContent   = sizingAssumptionsOpen ? '▲' : '▼';
+}
+
+// ── GPU Mode (single vs compare) ──
+let gpuMode = 'single';          // 'single' | 'compare'
+let compareChartInstances = {};  // cache chart objects
+
+function setGPUMode(mode) {
+  gpuMode = mode;
+
+  // Segment buttons
+  document.getElementById('mode-single').classList.toggle('active', mode === 'single');
+  document.getElementById('mode-compare').classList.toggle('active', mode === 'compare');
+
+  // GPU selector panels
+  document.getElementById('gpu-single-select').style.display  = mode === 'single'  ? '' : 'none';
+  document.getElementById('gpu-compare-select').style.display = mode === 'compare' ? '' : 'none';
+
+  // Results panels
+  document.getElementById('results-single-panel').style.display  = mode === 'single'  ? '' : 'none';
+  document.getElementById('results-compare-panel').style.display = mode === 'compare' ? '' : 'none';
+
+  if (mode === 'compare') {
+    renderCompareCheckboxes();
+    runCompareCalc();
+  } else {
+    recalculate();
+  }
+}
+
+function renderCompareCheckboxes() {
+  const container = document.getElementById('gpuCompareOptions');
+  container.innerHTML = '';
+  Object.entries(GPU_SPECS).forEach(([key, gpu]) => {
+    const wrap = document.createElement('label');
+    wrap.className = 'gpu-option';
+    wrap.style.cssText = 'cursor:pointer;';
+    const checked = ['mi300x','h100'].includes(key); // defaults
+    wrap.innerHTML = `
+      <input type="checkbox" name="gpuCmp" value="${key}" ${checked ? 'checked' : ''}
+             onchange="runCompareCalc()" style="accent-color:var(--amd-red);width:15px;height:15px;flex-shrink:0;">
+      <div style="flex:1;">
+        <div class="gpu-option-name">${gpu.name}</div>
+        <div class="gpu-option-specs">${gpu.vram} GB VRAM · ${gpu.bw} TB/s BW · ${gpu.bf16tflops.toLocaleString()} BF16 TFLOPS · ${gpu.tdp}W TDP</div>
+      </div>
+      <span class="badge ${gpu.vendor==='AMD'?'badge-red':'vendor-nvidia'}">${gpu.vendor}</span>
+    `;
+    container.appendChild(wrap);
+  });
+}
+
+function runCompareCalc() {
+  const checked = [...document.querySelectorAll('#gpuCompareOptions input[name=gpuCmp]:checked')]
+    .map(el => el.value);
+
+  const emptyState   = document.getElementById('compareEmptyState');
+  const tableWrap    = document.getElementById('compareTable');
+  const chartCard    = document.getElementById('compareChartCard');
+  const subtitle     = document.getElementById('compareSubtitle');
+
+  if (checked.length < 2) {
+    emptyState.style.display = '';
+    tableWrap.style.display  = 'none';
+    chartCard.style.display  = 'none';
+    subtitle.textContent = 'Select 2 or more GPUs to compare';
+    return;
+  }
+
+  emptyState.style.display = 'none';
+  tableWrap.style.display  = '';
+  chartCard.style.display  = '';
+  subtitle.textContent = `Comparing ${checked.length} GPU platforms`;
+
+  // Run sizing for each selected GPU
+  const rows = checked.map(gpuKey => {
+    const gpu = GPU_SPECS[gpuKey];
+    // temporarily override the radio to use this GPU's key, run calc, restore
+    const r = runSizingCalcForGPU(gpuKey);
+    return { gpuKey, gpu, r };
+  });
+
+  // Build comparison table
+  const table = document.getElementById('compareTableEl');
+  const metrics = [
+    { label: 'GPU Platform',          render: d => `<span class="badge ${d.gpu.vendor==='AMD'?'badge-red':'vendor-nvidia'}">${d.gpu.vendor}</span> ${d.gpu.name}` },
+    { label: 'VRAM per GPU',          render: d => d.gpu.vram + ' GB',        key: 'vram',    lower: false },
+    { label: 'Memory Bandwidth',      render: d => d.gpu.bw + ' TB/s',        key: 'bw',      lower: false },
+    { label: 'BF16 TFLOPS',           render: d => d.gpu.bf16tflops.toLocaleString(), key: 'bf16tflops', lower: false },
+    { label: 'Min GPUs (mem-bound)',   render: d => fmt(d.r.minGPUs),          key: 'minGPUs', lower: true  },
+    { label: 'Recommended GPUs',      render: d => fmt(d.r.recGPUs),          key: 'recGPUs', lower: true  },
+    { label: 'Servers Required',       render: d => fmt(d.r.servers),          key: 'servers', lower: true  },
+    { label: 'Total VRAM Available',   render: d => fmt(d.r.totalVRAM) + ' GB', key: 'totalVRAM', lower: false },
+    { label: 'Model Weight Memory',    render: d => fmtGB(d.r.weightMemGB),   key: null },
+    { label: 'KV Cache Memory',        render: d => fmtGB(d.r.kvCacheMemGB),  key: null },
+    { label: 'Output Throughput (TPS)',render: d => fmt(d.r.totalSystemTPS,0)+' tok/s', key: 'totalSystemTPS', lower: false },
+    { label: 'TTFT (est.)',            render: d => fmtMs(d.r.ttft_ms),       key: 'ttft_ms', lower: true  },
+    { label: 'TPOT (est.)',            render: d => fmtMs(d.r.tpot_ms),       key: 'tpot_ms', lower: true  },
+    { label: 'E2E Latency (p50)',      render: d => fmtMs(d.r.e2e_ms),        key: 'e2e_ms',  lower: true  },
+    { label: 'GPU Memory Utilization', render: d => fmt(d.r.memUtil,1)+'%',   key: 'memUtil', lower: true  },
+    { label: 'Tokens/sec/Watt',        render: d => fmt(d.r.tpsPerWatt,3)+' tok/s/W', key: 'tpsPerWatt', lower: false },
+  ];
+
+  // For each comparable metric, find best value
+  const bestMap = {};
+  metrics.forEach(m => {
+    if (!m.key) return;
+    const vals = rows.map(d => {
+      const v = m.key === 'vram' ? d.gpu.vram
+              : m.key === 'bw'   ? d.gpu.bw
+              : m.key === 'bf16tflops' ? d.gpu.bf16tflops
+              : d.r[m.key];
+      return { gpuKey: d.gpuKey, v };
+    });
+    const best = m.lower
+      ? vals.reduce((a,b) => a.v < b.v ? a : b)
+      : vals.reduce((a,b) => a.v > b.v ? a : b);
+    bestMap[m.key] = best.gpuKey;
+  });
+
+  let html = '<thead><tr><th style="min-width:180px;">Metric</th>';
+  rows.forEach(d => {
+    html += `<th style="text-align:right;min-width:140px;">${d.gpu.name}</th>`;
+  });
+  html += '</tr></thead><tbody>';
+
+  metrics.forEach(m => {
+    html += `<tr><td style="color:var(--text-secondary);font-size:12px;">${m.label}</td>`;
+    rows.forEach(d => {
+      const isBest = m.key && bestMap[m.key] === d.gpuKey;
+      const cellClass = isBest ? 'val highlight' : 'val';
+      const star = isBest ? ' <span style="font-size:10px;color:var(--accent-green);">★ best</span>' : '';
+      html += `<td class="${cellClass}" style="text-align:right;">${m.render(d)}${star}</td>`;
+    });
+    html += '</tr>';
+  });
+  html += '</tbody>';
+  table.innerHTML = html;
+
+  // Charts
+  renderCompareCharts(rows);
+}
+
+function runSizingCalcForGPU(gpuKey) {
+  // Same as runSizingCalc() but uses a specified GPU instead of reading the radio
+  const family = getStr('modelFamily');
+  const isCustom = family === 'custom';
+  let profile;
+  if (isCustom) {
+    profile = {
+      params: getVal('customParams',7), layers: getVal('customNumLayers',32),
+      kvHeads: getVal('customKVHeads',8), headDim: getVal('customHeadDim',128),
+    };
+  } else {
+    const sizeKey = getStr('modelSize');
+    const p = MODEL_PROFILES[sizeKey];
+    if (!p) return null;
+    profile = { params: p.params, layers: p.layers, kvHeads: p.kvHeads, headDim: p.headDim };
+  }
+  const bytesPerParam    = getVal('weightPrecision', 2);
+  const kvBytes          = getVal('kvPrecision', 2);
+  const concReqs         = getVal('concurrentReqs', 32);
+  const inputTokens      = getVal('inputTokens', 512);
+  const outputTokens     = getVal('outputTokens', 256);
+  const gpuUtilTarget    = getVal('gpuUtilTarget', 85) / 100;
+  const redundancyFactor = getVal('redundancyFactor', 1.25);
+  const gpusPerServer    = getVal('gpusPerServer', 8);
+  const gpuEfficiency    = getVal('gpuEfficiency', 0.35);
+  const memOverheadPct   = getVal('memOverhead', 8) / 100;
+  const tensorParallel   = getVal('tensorParallel', 1);
+  const gpu              = GPU_SPECS[gpuKey];
+  const contextLen = inputTokens + outputTokens;
+
+  const weightMemGB   = calcModelWeightMemGB(profile.params, bytesPerParam);
+  const kvCacheMemGB  = calcKVCacheMemGB(profile.layers, profile.kvHeads, profile.headDim, contextLen, concReqs, kvBytes);
+  const overheadMemGB = (weightMemGB + kvCacheMemGB) * memOverheadPct;
+  const totalRequiredGB = weightMemGB + kvCacheMemGB + overheadMemGB;
+
+  const availablePerGPU = gpu.vram * gpuUtilTarget;
+  const minGPUsRaw = Math.ceil(totalRequiredGB / availablePerGPU);
+  const minGPUs    = Math.max(minGPUsRaw, tensorParallel);
+  const recGPUs    = Math.ceil(minGPUs * redundancyFactor);
+  const servers    = Math.ceil(recGPUs / gpusPerServer);
+  const totalVRAM  = recGPUs * gpu.vram;
+
+  const tpsPerGPU      = calcThroughputTPS(gpu.bw, profile.params, gpuEfficiency);
+  const totalSystemTPS = tpsPerGPU * recGPUs;
+  const ttft_ms = calcTTFT_ms(inputTokens, gpu.bf16tflops, profile.params, gpuEfficiency, recGPUs);
+  const tpot_ms = calcTPOT_ms(totalSystemTPS, concReqs);
+  const e2e_ms  = ttft_ms + (outputTokens * tpot_ms);
+  const memUtil = (totalRequiredGB / totalVRAM) * 100;
+
+  const totalWatts = recGPUs * gpu.tdp;
+  const tpsPerWatt = totalSystemTPS > 0 ? totalSystemTPS / totalWatts : 0;
+
+  return {
+    weightMemGB, kvCacheMemGB, overheadMemGB, totalRequiredGB,
+    minGPUs, recGPUs, servers, totalVRAM,
+    totalSystemTPS, ttft_ms, tpot_ms, e2e_ms, memUtil,
+    concReqs, gpusPerServer, totalWatts, tpsPerWatt,
+  };
+}
+
+function renderCompareCharts(rows) {
+  const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+  const gridColor = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)';
+  const textColor = isDark ? '#94a3b8' : '#64748b';
+
+  // Color palette: AMD red for AMD, green-gray for NVIDIA
+  const COLORS = {
+    mi300x: '#ED1C24', mi325x: '#c0141a', mi350x: '#8b0000',
+    h100:   '#76b900', h200:   '#4a7a00',
+  };
+
+  const labels  = rows.map(d => d.gpu.name);
+  const bgColors = rows.map(d => COLORS[d.gpuKey] || '#94a3b8');
+  const borderColors = bgColors.map(c => c);
+
+  const sharedOpts = (title) => ({
+    responsive: true, maintainAspectRatio: false,
+    plugins: {
+      legend: { display: false },
+      tooltip: { callbacks: { label: ctx => `${ctx.label}: ${ctx.parsed.x.toLocaleString()}` } },
+    },
+    indexAxis: 'y',
+    scales: {
+      x: { ticks: { color: textColor, font:{size:10} }, grid: { color: gridColor } },
+      y: { ticks: { color: textColor, font:{size:10} }, grid: { display: false } },
+    },
+  });
+
+  const makeChart = (id, data, opts) => {
+    const ctx = document.getElementById(id);
+    if (!ctx) return;
+    if (compareChartInstances[id]) compareChartInstances[id].destroy();
+    compareChartInstances[id] = new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels,
+        datasets: [{ data, backgroundColor: bgColors, borderColor: borderColors, borderWidth: 1, borderRadius: 4 }],
+      },
+      options: opts,
+    });
+  };
+
+  makeChart('compareGPUChart',       rows.map(d => d.r.recGPUs),                          sharedOpts('Rec. GPUs'));
+  makeChart('compareTPSChart',       rows.map(d => Math.round(d.r.totalSystemTPS)),         sharedOpts('Output TPS'));
+  makeChart('compareLatencyChart',   rows.map(d => Math.round(d.r.e2e_ms)),                 sharedOpts('E2E Latency ms'));
+  makeChart('compareEfficiencyChart',rows.map(d => parseFloat(d.r.tpsPerWatt.toFixed(4))), sharedOpts('Tok/s/W'));
+}
+
+
+function toggleTheme() {
+  const html = document.documentElement;
+  const isDark = html.getAttribute('data-theme') === 'dark';
+  html.setAttribute('data-theme', isDark ? 'light' : 'dark');
+  document.getElementById('themeToggle').textContent = isDark ? '🌙' : '☀️';
+  if (tcoResults) updateTCOChart(tcoResults);
+}
+
+function openSidebar() {
+  document.getElementById('sidebar').classList.add('open');
+  document.getElementById('sidebarOverlay').classList.add('open');
+}
+function closeSidebar() {
+  document.getElementById('sidebar').classList.remove('open');
+  document.getElementById('sidebarOverlay').classList.remove('open');
+}
+
+function printReport() { window.print(); }
+
+function exportJSON() {
+  const data = {
+    generatedAt: new Date().toISOString(),
+    sizingResults: sizingResults ? {
+      gpu: sizingResults.gpu.name,
+      minGPUs: sizingResults.minGPUs,
+      recGPUs: sizingResults.recGPUs,
+      servers: sizingResults.servers,
+      weightMemGB: sizingResults.weightMemGB,
+      kvCacheMemGB: sizingResults.kvCacheMemGB,
+      totalRequiredGB: sizingResults.totalRequiredGB,
+      totalSystemTPS: sizingResults.totalSystemTPS,
+      ttft_ms: sizingResults.ttft_ms,
+      tpot_ms: sizingResults.tpot_ms,
+      e2e_ms: sizingResults.e2e_ms,
+    } : null,
+    tcoResults: tcoResults ? {
+      years: tcoResults.years,
+      totalOnPrem: tcoResults.totalOnPrem,
+      totalCloud: tcoResults.totalCloud,
+      recommended: tcoResults.recommended,
+      savingsPct: tcoResults.savingsPct,
+      breakevenMonths: tcoResults.breakevenMonths,
+    } : null,
+    disclaimer: 'Planning estimates only. Not a binding quote.',
+  };
+  const blob = new Blob([JSON.stringify(data, null, 2)], {type:'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'ai-infracalc-results.json';
+  a.click();
+}
+
+function copyShareURL() {
+  const params = new URLSearchParams();
+  const inputs = ['modelFamily','modelSize','weightPrecision','kvPrecision','concurrentReqs',
+    'inputTokens','outputTokens','targetRPS','gpuUtilTarget','redundancyFactor',
+    'tcoYears','serverCost','powerCostKwh','personnelCost','cloudProvider','pricingModel'];
+  inputs.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) params.set(id, el.value);
+  });
+  const gpuSel = document.querySelector('#gpuOptions input[name=gpuSel]:checked');
+  if (gpuSel) params.set('gpu', gpuSel.value);
+
+  const url = window.location.href.split('?')[0] + '?' + params.toString();
+  navigator.clipboard.writeText(url).then(() => {
+    alert('Share URL copied to clipboard!');
+  }).catch(() => {
+    prompt('Copy this URL:', url);
+  });
+}
+
+function loadFromURL() {
+  const params = new URLSearchParams(window.location.search);
+  if (params.size === 0) return;
+  const setVal = (id, val) => { const el = document.getElementById(id); if (el && val !== null) el.value = val; };
+  ['modelFamily','modelSize','weightPrecision','kvPrecision','concurrentReqs',
+   'inputTokens','outputTokens','targetRPS','gpuUtilTarget','redundancyFactor',
+   'tcoYears','serverCost','powerCostKwh','personnelCost','cloudProvider','pricingModel'
+  ].forEach(id => setVal(id, params.get(id)));
+  const gpu = params.get('gpu');
+  if (gpu) {
+    const radio = document.querySelector(`#gpuOptions input[value="${gpu}"]`);
+    if (radio) { radio.checked = true; onGPUChange(radio); }
+  }
+  onModelFamilyChange();
+  onCloudProviderChange();
+}
+
+function resetAll() {
+  if (confirm('Reset all inputs to defaults?')) location.href = location.pathname;
+}
+
+// =====================================================================
+// INITIALISATION
+// =====================================================================
+document.addEventListener('DOMContentLoaded', () => {
+  renderGPUOptions();
+  onModelFamilyChange();
+  onCloudProviderChange();
+  loadFromURL();
+  applyPreset('chatbot');
+  recalculate();
+  recalcTCO();
+});
+
+// =====================================================================
+// CHATBOT
+// =====================================================================
+
+const CHAT_DEFAULT_KEY = 'csk-cfkpkn9n4tch2rhvtnt5t4vr26n8kje63h8tdckw328jmxvk';
+const CHAT_MODEL       = 'gpt-oss-120b';
+const CHAT_ENDPOINT    = 'https://api.cerebras.ai/v1/chat/completions';
+
+const CHAT_SYSTEM_PROMPT = `You are InfraCalc Assistant, an AI helper embedded inside the Enterprise AI InfraCalc web application. Your sole purpose is to help users understand and use this tool. You must NEVER answer questions outside this scope.
+
+## WHAT THIS TOOL DOES
+Enterprise AI InfraCalc is a browser-based planning tool for estimating GPU infrastructure requirements and total cost of ownership (TCO) for running large language model (LLM) inference workloads. It has four pages:
+1. Getting Started – overview and onboarding
+2. GenAI GPU Sizing – estimates GPU count, memory, throughput, latency
+3. TCO Calculator – compares on-premises vs cloud IaaS costs
+4. Results & Export – consolidated summary, executive narrative, export to PDF/JSON
+
+## SUPPORTED MODELS
+- Llama 3: 8B, 70B, 405B (Meta)
+- Mistral 7B
+- Mixtral 8×7B (Mixture of Experts, ~47B active params)
+- DeepSeek-R1: 7B, 67B
+- Custom / Manual entry (user specifies params, layers, KV heads, head dim, vocab size)
+
+## SUPPORTED GPU HARDWARE
+| GPU | VRAM | Memory BW | BF16 TFLOPS | TDP |
+|-----|------|-----------|-------------|-----|
+| AMD MI300X | 192 GB HBM3 | 5.3 TB/s | 1,307 | 750W |
+| AMD MI325X | 256 GB HBM3E | 6.0 TB/s | 1,307 | 750W |
+| AMD MI350X | 288 GB HBM3E | 8.0 TB/s | 2,614 | 800W |
+| NVIDIA H100 SXM | 80 GB | 3.35 TB/s | 989 | 700W |
+| NVIDIA H200 SXM | 141 GB | 4.8 TB/s | 989 | 700W |
+
+## WORKLOAD PRESETS
+- Customer Chatbot: 32 concurrent, 512 input / 256 output tokens, 10 RPS, 1.25× redundancy
+- Code Assistant: 16 concurrent, 1024 input / 512 output, 5 RPS, 1.25× redundancy
+- RAG / Document QA: 24 concurrent, 2048 input / 512 output, 8 RPS, 1.5× redundancy
+- Batch Summarization: 8 concurrent, 4096 input / 256 output, 2 RPS, 1.0× redundancy
+
+## SIZING CALCULATION FORMULAS
+(The number in (Guide #N) is the formula card in the Formulas & Assumptions reference — use it for [REF:N] citations.)
+Model Weight Memory (GB) = Parameters_B × BytesPerParam (Guide #1)
+    BF16/FP16 = 2 B/param, FP8/INT8 = 1 B/param, INT4 = 0.5 B/param
+
+KV Cache Memory (GB) = 2 × NumLayers × NumKVHeads × HeadDim × EffectiveContextLen × ConcurrentRequests × KVBytesPerElement / 1,000,000,000 (Guide #2)
+    EffectiveContextLen = (InputTokens + OutputTokens) × ConversationDepth
+    ConversationDepth = 1 for stateless/single-turn (RAG, batch). For multi-turn chat, depth = avg number of turns accumulated in the KV cache per active user slot (e.g. 10 turns × 768 tokens/turn = 7,680 tokens effective context per user).
+
+Total Required Memory (GB) = (WeightsMem + KVMem) × (1 + OverheadFraction) (Guide #3)
+    Default overhead = 8% for framework, CUDA runtime, activations
+
+Min GPUs (memory-bound) = ceil(TotalRequiredGB / (GPU_VRAM × UtilTarget%)) (Guide #4)
+    Default GPU utilization target = 85%
+
+Recommended GPUs = ceil(MinGPUs × RedundancyFactor) (Guide #5)
+
+Servers Required = ceil(RecGPUs / GPUsPerServer)  [default 8 GPUs/server] (Guide #5)
+
+Output TPS = (GPU_MemBW_TB/s × 1e12) / (2 × Params_B × 1e9) × EfficiencyFactor × NumGPUs (Guide #6)
+    Default efficiency factor = 0.35 (accounts for memory-bandwidth bottleneck, ~35% MFU)
+
+TTFT (ms) = (InputTokens × 2 × Params_B × 1e9) / (GPU_BF16_TFLOPS × 1e12 × Efficiency × NumGPUs) × 1000 (Guide #7)
+
+TPOT (ms) = 1000 / (TotalSystemTPS / ConcurrentRequests) (Guide #8)
+
+E2E Latency (ms) = TTFT + (OutputTokens × TPOT) (Guide #9)
+
+GPU Memory Utilization (%) = TotalRequiredGB / TotalAvailableVRAM × 100 (Guide #10)
+
+Tokens/sec/Watt = TotalOutputTPS / (NumGPUs × GPU_TDP_Watts) (Guide #11)
+
+## TCO CALCULATION FORMULAS
+On-Premises:
+- Hardware CapEx = (NumServers × ServerUnitCost) + StorageCost + NetworkingCost (Guide #12)
+- Annual Power Cost = NumGPUs × GPU_TDP_W × 8760h × PUE / 1000 × $/kWh (Guide #13)
+- Annual Maintenance = HardwareCapEx × MaintenancePct% (Guide #14)
+- Total On-Prem = CapEx + (AnnualPower + Personnel + Maintenance + SoftwareLicensing) × Years (Guide #15)
+
+Cloud IaaS:
+- Effective Hourly Rate = BaseHourlyRate × PricingFactor × (1 - EnterpriseDiscount%) (Guide #16)
+  - On-Demand: ×1.0 | 1-Year Reserved: ×0.70 | 3-Year Reserved: ×0.55
+- Cloud Instances Required = ceil(NumGPUs / GPUsPerInstance) (Guide #17)
+- Annual Compute = EffectiveHourly × NumInstances × 8760h × UtilizationPct (Guide #18)
+- Annual Ancillary = (CloudStorage + DataTransfer + SupportPlan) × 12 (Guide #19)
+- Total Cloud = (AnnualCompute + AnnualAncillary) × Years (Guide #20)
+
+Break-Even & Savings:
+- Break-Even Months = HardwareCapEx / (CloudMonthly − OnPremMonthlyOpEx)  (if positive) (Guide #21)
+- Savings % = (CloudTotal − OnPremTotal) / CloudTotal × 100 (Guide #22)
+
+Unit Economics (NEW — shown in the Unit Economics panel on the TCO page):
+- On-Prem $/GPU-Hour = TotalOnPremTCO / (NumGPUs × Years × 8,760) (Guide #23)
+    Spreads the FULL TCO — CapEx AND all OpEx — across every GPU-hour available in the period.
+- Cloud $/GPU-Hour = EffectiveHourlyRate / GPUsPerInstance (Guide #24)
+    The contract rate per individual GPU. Does not change with utilization.
+- Annual Tokens = TpsPerGPU × NumGPUs × 3,600 × 8,760 × UtilizationPct (Guide #25)
+    TpsPerGPU comes from the GenAI Sizing calc (memory-bandwidth formula). Both on-prem and cloud use the SAME utilization % for apples-to-apples comparison.
+- On-Prem $/1M Tokens = (TotalOnPremTCO / Years) / (AnnualTokens / 1,000,000) (Guide #26)
+    Annual amortized cost divided by annual token output. Requires Sizing to be run first.
+- Cloud $/1M Tokens = (AnnualCompute + AnnualAncillary) / (AnnualTokens / 1,000,000) (Guide #27)
+    Annual cloud spend (compute + storage + egress + support) divided by annual token output.
+
+## CLOUD PROVIDERS & INSTANCES
+Azure:
+- ND96is_MI300X_v5: 8× MI300X, $48.00/hr on-demand
+- ND96isr_MI300X_v5: 8× MI300X, $48.00/hr on-demand
+
+DigitalOcean:
+- MI300X ×1 on-demand: $1.99/hr
+- MI300X ×8 on-demand: $15.92/hr
+- MI300X ×8 12-month reserved (−25%): $11.94/hr
+
+## KEY CONCEPTS TO EXPLAIN
+- **KV Cache**: Memory storing key-value attention tensors for each token in active requests. Grows with context length and concurrency.
+- **Tensor Parallelism**: Splitting model weights across multiple GPUs to fit large models. Adds communication overhead.
+- **MFU (Model FLOP Utilization)**: Fraction of peak compute actually used. LLM decode is memory-bandwidth-bound (~30–45% typical).
+- **PUE (Power Usage Effectiveness)**: Ratio of total facility power to IT power. 1.0 = perfect, 1.2 = efficient data center, 1.5 = older facility.
+- **TTFT (Time-to-First-Token)**: Latency from request submission to first token generated. Compute-bound (prefill phase).
+- **TPOT (Time-per-Output-Token)**: Time to generate each subsequent token. Memory-bandwidth-bound (decode phase).
+- **E2E Latency**: Total response latency = TTFT + (OutputTokens × TPOT).
+- **Redundancy Factor**: Multiplier on GPU count for high availability. 1.25 = N+25% spare, 2.0 = full N+N.
+- **Break-Even**: The month at which on-premises cumulative cost crosses below cloud cumulative cost.
+
+## OUT OF SCOPE — POLITELY DECLINE
+If asked about anything not directly related to this tool, AI infrastructure planning, the GPU hardware listed, the LLM models listed, or the TCO/sizing concepts above, respond:
+"I'm only able to help with questions about the Enterprise AI InfraCalc tool — GPU sizing, TCO analysis, calculator inputs/outputs, and the methodology used here. For other topics, please use a general-purpose AI assistant."
+
+## DIVISION OF LABOR — READ FIRST
+The numbers are calculated for you. Your ONLY job is presentation/formatting. There is a strict separation:
+- WE (the app) own the MATH. Your context contains "=== ... WALKTHROUGH ===" blocks with authoritative numbers, and "=== PRE-WRITTEN EXPLANATION ===" blocks with the full breakdown already worked out.
+- YOU own the FORMATTING. Take the pre-written explanation and present it clearly and readably in the chat window.
+
+Rules you MUST follow:
+- Use ONLY the numbers exactly as they appear in the WALKTHROUGH / PRE-WRITTEN EXPLANATION. Copy each number character-for-character (including the $ sign, commas, decimals, units, and "/yr" or "/mo" suffixes).
+- NEVER perform arithmetic. Never add, subtract, multiply, or divide. If the explanation says "= $3.72M", write "= $3.72M" — do not verify or recompute it.
+- You MAY rephrase wording and improve layout for readability, but every numeric value and every "=" result must stay identical to the source.
+- NEVER use LaTeX (no \[, \ceil, \frac, \text{}). Write math inline in plain text, e.g. "80 × 750W × 8,760 ÷ 1,000 = ...".
+- Always keep the $ sign attached to dollar amounts.
+- If asked something not in the context, say: "That detail isn't in the current calculation — check the Results panel."
+
+## RESPONSE FORMAT — CRITICAL
+You are responding inside a small chatbot window, NOT a document editor. Follow these rules strictly:
+- Use SHORT paragraphs separated by a blank line. Never write walls of text.
+- Use **bold** only for key terms or final numbers — sparingly.
+- Use simple numbered lists (1. 2. 3.) or bullet points (- item) for multi-step explanations.
+- NEVER use markdown tables (| col | col |). Instead write each item as a plain bullet: "- Hardware CapEx: $4.08M — 10 servers × $200K + storage + networking"
+- NEVER use ### headings. Use a bold line instead: "**On-Premises Costs**"
+- Keep your total response under 250 words. Be direct and concise.
+- When walking through a formula, copy the exact line from the walkthrough: "= [numbers] = [result]"
+- End with one short line: "Want me to explain any step in more detail?"
+
+## FORMULA REFERENCE LINKS — IMPORTANT
+When your answer explains HOW a specific result/equation was derived, end your message with a reference tag pointing to the matching formula card in the Formulas & Assumptions guide. Use the EXACT syntax: [REF:N] where N is the (Guide #N) number listed beside each formula above.
+- Place the tag on its very last line, after your closing question.
+- Only include a [REF:N] when the question is about how a value/equation was derived. Do NOT add it for general/conceptual questions (e.g. "what is TTFT?") or out-of-scope questions.
+- You may include up to 2 tags if the answer spans two formulas, e.g. "[REF:1] [REF:2]".
+- Examples:
+  - User asks how KV cache was calculated → end with "[REF:2]"
+  - User asks about multi-turn context growth, conversation depth, or why KV cache is larger for chatbots → end with "[REF:2]"
+  - User asks how the recommended GPU count was reached → end with "[REF:5]"
+  - User asks how On-Prem TCO total was derived → end with "[REF:15]"
+  - User asks how the cloud compute cost was derived → end with "[REF:18]"
+  - User asks how On-Prem $/GPU-Hour was calculated → end with "[REF:23]"
+  - User asks how Cloud $/GPU-Hour was calculated → end with "[REF:24]"
+  - User asks how Annual Tokens is calculated → end with "[REF:25]"
+  - User asks how On-Prem $/1M Tokens was calculated → end with "[REF:26]"
+  - User asks how Cloud $/1M Tokens was calculated → end with "[REF:27]"
+  - User asks to explain unit economics or all four $/GPU-hour and $/1M token numbers → end with "[REF:23] [REF:26]"
+- Do NOT write the words "REF" or describe the tag — just output the literal [REF:N]. The app converts it into a clickable link automatically.
+
+## TONE
+- Be concise, factual, and helpful.
+- When explaining a calculator result, reference the specific formula numbers above.
+- When the user's current calculator state is provided in [CURRENT STATE], use those live numbers in your explanation.
+- Use plain language; avoid unnecessary jargon unless the user asks for technical depth.`;
+
+// Chat state
+let chatHistory   = [];
+let chatIsOpen    = false;
+let chatIsLoading = false;
+
+// Formula card titles (must match the Formulas & Assumptions guide card numbers)
+const FORMULA_TITLES = {
+  1:'Model Weight Memory', 2:'KV Cache Memory', 3:'Total Required Memory',
+  4:'Minimum GPU Count', 5:'Recommended GPU & Server Count', 6:'Output Throughput',
+  7:'Time to First Token (TTFT)', 8:'Time per Output Token (TPOT)', 9:'End-to-End Latency',
+  10:'GPU Memory Utilization', 11:'Tokens/sec/Watt', 12:'Hardware CapEx',
+  13:'Annual Power Cost', 14:'Annual Maintenance', 15:'Total On-Premises TCO',
+  16:'Cloud Effective Hourly Rate', 17:'Cloud Instances Required', 18:'Annual Cloud Compute',
+  19:'Annual Cloud Ancillary', 20:'Total Cloud TCO', 21:'Break-Even Point', 22:'Savings Percentage',
+  23:'On-Prem $/GPU-Hour', 24:'Cloud $/GPU-Hour', 25:'Annual Token Output',
+  26:'On-Prem $/1M Tokens', 27:'Cloud $/1M Tokens',
+};
+
+// Navigate to a specific formula in the Formulas & Assumptions page
+function goToFormula(n) {
+  showPage('assumptions');
+  const iframe = document.getElementById('formulaIframe');
+  if (!iframe) return;
+  const target = 'InfraCalc_Formula_Guide.html#formula-' + n;
+  // Reload the iframe with the hash so it scrolls + highlights even if already loaded
+  if (iframe.getAttribute('src') !== target) {
+    iframe.setAttribute('src', target);
+  } else {
+    // same target — nudge it to re-trigger the scroll/highlight
+    iframe.contentWindow?.location.reload();
+  }
+}
+
+// Access code gate
+const CHAT_ACCESS_CODE = 'AMD';
+function isChatUnlocked() { return localStorage.getItem('chat_unlocked') === 'true'; }
+
+function applyGateState() {
+  const unlocked = isChatUnlocked();
+  document.getElementById('chat-gate').classList.toggle('visible', !unlocked);
+  document.getElementById('chat-messages').style.display    = unlocked ? '' : 'none';
+  document.getElementById('chat-suggestions').style.display = unlocked ? '' : 'none';
+  document.querySelector('.chat-input-row').style.display   = unlocked ? '' : 'none';
+}
+
+function submitGateCode() {
+  const input = document.getElementById('chat-gate-input');
+  const errEl = document.getElementById('chat-gate-error');
+  if (input.value.trim().toUpperCase() === CHAT_ACCESS_CODE.toUpperCase()) {
+    localStorage.setItem('chat_unlocked', 'true');
+    errEl.classList.remove('visible');
+    input.value = '';
+    applyGateState();
+    if (chatHistory.length === 0) {
+      appendBotMessage("Hi! I'm the InfraCalc Assistant. I'm here to help you **understand the calculator's results** — I can walk you through how your sizing or TCO numbers were derived, explain the formulas and inputs, and clarify GPU infrastructure concepts.\n\n**Tip:** For the most useful answers, run the GenAI Sizing and TCO calculators first. Once you have results on screen, I can explain exactly how each number was reached and clear up any doubts.\n\nJust so you know: I'm an explainer for this tool, not a predictive tool or a general-purpose assistant. What would you like me to explain?");
+    }
+    setTimeout(() => document.getElementById('chat-textarea').focus(), 100);
+  } else {
+    errEl.classList.add('visible');
+    input.select();
+  }
+}
+
+function getActiveKey() {
+  return localStorage.getItem('or_user_key') || CHAT_DEFAULT_KEY;
+}
+
+function toggleChat() {
+  chatIsOpen = !chatIsOpen;
+  const panel = document.getElementById('chat-panel');
+  panel.classList.toggle('open', chatIsOpen);
+
+  // On mobile (fullscreen chat), lock background scroll while the chat is open
+  const isMobile = window.matchMedia('(max-width: 600px)').matches;
+  document.body.classList.toggle('chat-scroll-lock', chatIsOpen && isMobile);
+
+  if (!chatIsOpen) return;
+
+  applyGateState();
+
+  if (!isChatUnlocked()) {
+    setTimeout(() => document.getElementById('chat-gate-input').focus(), 100);
+    return;
+  }
+
+  if (chatHistory.length === 0) {
+    appendBotMessage("Hi! I'm the InfraCalc Assistant. I can explain how the calculator works, walk you through your current sizing or TCO results, and answer questions about GPU infrastructure planning. What would you like to know?");
+  }
+  setTimeout(() => document.getElementById('chat-textarea').focus(), 100);
+}
+
+function fmt2(n) { return isNaN(n) ? '—' : n.toLocaleString('en-US', {minimumFractionDigits:0, maximumFractionDigits:2}); }
+function fmtUSD2(n) {
+  if (isNaN(n)||n===null) return '—';
+  if (n >= 1e6) return '$' + (n/1e6).toFixed(2) + 'M';
+  if (n >= 1e3) return '$' + Math.round(n).toLocaleString();
+  return '$' + Math.round(n);
+}
+
+function buildCurrentStateContext() {
+  const parts = [];
+
+  if (sizingResults) {
+    const r = sizingResults;
+    const modelLabel = r.isCustom ? 'Custom Model' :
+      (MODEL_PROFILES[document.getElementById('modelSize')?.value]?.label || 'Unknown');
+    const precLabel = {'2':'BF16/FP16 (2 bytes/param)','1':'FP8/INT8 (1 byte/param)','0.5':'INT4 (0.5 bytes/param)'}[String(r.bytesPerParam)] || r.bytesPerParam+' B/param';
+    const kvLabel   = {'2':'FP16/BF16 (2 bytes/element)','1':'FP8 (1 byte/element)'}[String(r.kvBytes)] || r.kvBytes+' B/elem';
+    const utilPct   = Math.round(r.gpuUtilTarget * 100);
+    const availPerGPU = (r.gpu.vram * r.gpuUtilTarget).toFixed(1);
+    const effPct    = (parseFloat(document.getElementById('gpuEfficiency')?.value||0.35));
+    const overheadPct = parseFloat(document.getElementById('memOverhead')?.value||8);
+    const tpsPerWatt  = (r.totalSystemTPS / (r.recGPUs * r.gpu.tdp)).toFixed(3);
+
+    const convDepthVal = r.convDepth || 1;
+    const convDepthNote = convDepthVal > 1
+      ? `\n  ⚠️ Multi-turn mode: depth ${convDepthVal} turns. Each user slot holds ${r.effectiveContextLen.toLocaleString()} tokens (${convDepthVal}× single-turn context of ${r.contextLen} tokens). This is why KV cache is ${convDepthVal}× larger than a stateless deployment.`
+      : `\n  Depth = 1 (stateless/single-turn). For multi-turn chat, increase Conversation Depth to model accumulated context.`;
+
+    const sizingExplanation = `**How the GPU sizing was calculated**
+
+**Memory needed for the model**
+- Model: ${modelLabel} running on ${r.gpu.name}
+- Weight Memory: ${r.profile?.params ?? '?'}B params × ${r.bytesPerParam} bytes/param = **${r.weightMemGB.toFixed(2)} GB**
+- KV Cache (per-turn context = ${r.contextLen} tokens | conversation depth = ${convDepthVal} turn${convDepthVal > 1 ? 's' : ''} | effective context per user = ${r.effectiveContextLen.toLocaleString()} tokens):
+  2 × ${r.profile?.layers ?? '?'} layers × ${r.profile?.kvHeads ?? '?'} KV heads × ${r.profile?.headDim ?? '?'} head dim × ${r.effectiveContextLen.toLocaleString()} effective tokens × ${r.concReqs} concurrent users × ${r.kvBytes} bytes ÷ 1,000,000,000 = **${r.kvCacheMemGB.toFixed(2)} GB**${convDepthNote}
+- Framework Overhead (${overheadPct}%): (${r.weightMemGB.toFixed(2)} + ${r.kvCacheMemGB.toFixed(2)}) × ${(overheadPct/100).toFixed(2)} = **${r.overheadMemGB.toFixed(2)} GB**
+- Total Memory Required: ${r.weightMemGB.toFixed(2)} + ${r.kvCacheMemGB.toFixed(2)} + ${r.overheadMemGB.toFixed(2)} = **${r.totalRequiredGB.toFixed(2)} GB**
+
+**GPU count**
+- Each ${r.gpu.name} has ${r.gpu.vram} GB VRAM. At ${utilPct}% utilization target: ${r.gpu.vram} × ${r.gpuUtilTarget.toFixed(2)} = **${availPerGPU} GB usable per GPU**
+- Min GPUs: ceil(${r.totalRequiredGB.toFixed(2)} ÷ ${availPerGPU}) = **${r.minGPUs} GPUs**
+- With ${r.redundancyFactor}× redundancy: ceil(${r.minGPUs} × ${r.redundancyFactor}) = **${r.recGPUs} GPUs**
+- Servers: ceil(${r.recGPUs} ÷ ${r.gpusPerServer} GPUs/server) = **${r.servers} servers**
+
+**Performance estimates**
+- Output Throughput: **${Math.round(r.totalSystemTPS).toLocaleString()} tok/s** (GPU memory bandwidth ÷ model size × efficiency × GPU count)
+- TTFT: **${r.ttft_ms.toFixed(0)} ms** | TPOT: **${r.tpot_ms.toFixed(1)} ms** | E2E Latency: **${r.e2e_ms.toFixed(0)} ms**
+- Energy Efficiency: **${tpsPerWatt} tok/s/W**`;
+
+    parts.push(`=== SIZING CALCULATION WALKTHROUGH ===
+Model: ${modelLabel} | GPU: ${r.gpu.name} | Precision: ${precLabel} | KV: ${kvLabel}
+Concurrent Requests: ${r.concReqs} | Input: ${r.inputTokens} tokens/turn | Output: ${r.outputTokens} tokens/turn | Per-turn context: ${r.contextLen} tokens
+Conversation Depth: ${convDepthVal} turn${convDepthVal > 1 ? 's' : ''} | Effective Context per User Slot: ${r.effectiveContextLen.toLocaleString()} tokens${convDepthVal > 1 ? ` (${convDepthVal}× single-turn — multi-turn KV accumulation)` : ' (stateless)'}
+GPU Util Target: ${utilPct}% | Redundancy: ${r.redundancyFactor}× | GPUs/Server: ${r.gpusPerServer} | Efficiency: ${effPct}
+
+AUTHORITATIVE RESULTS (do not recalculate these):
+Weight Memory = ${r.weightMemGB.toFixed(2)} GB
+KV Cache Memory = ${r.kvCacheMemGB.toFixed(2)} GB  [conversation depth ${convDepthVal}, effective context ${r.effectiveContextLen.toLocaleString()} tokens/user]
+Overhead Memory = ${r.overheadMemGB.toFixed(2)} GB
+Total Required = ${r.totalRequiredGB.toFixed(2)} GB
+Usable per GPU = ${availPerGPU} GB
+Min GPUs = ${r.minGPUs}
+Recommended GPUs = ${r.recGPUs}
+Servers = ${r.servers}
+Total VRAM = ${r.totalVRAM} GB
+GPU Util% = ${r.memUtil.toFixed(1)}%
+Output TPS = ${Math.round(r.totalSystemTPS).toLocaleString()} tok/s
+TTFT = ${r.ttft_ms.toFixed(0)} ms
+TPOT = ${r.tpot_ms.toFixed(1)} ms
+E2E Latency = ${r.e2e_ms.toFixed(0)} ms
+Efficiency = ${tpsPerWatt} tok/s/W
+
+=== PRE-WRITTEN EXPLANATION FOR SIZING QUESTIONS ===
+${sizingExplanation}`);
+  }
+
+  if (tcoResults) {
+    const t = tcoResults;
+    const gpusPerSrv  = t.numGPUs / t.numServers;
+    const serverCost  = parseFloat(document.getElementById('serverCost')?.value || 0);
+    const storageCost = parseFloat(document.getElementById('storageCost')?.value || 0);
+    const netCost     = parseFloat(document.getElementById('networkingCost')?.value || 0);
+    const swAnnual    = parseFloat(document.getElementById('swCostAnnual')?.value || 0);
+    const powerKwh    = parseFloat(document.getElementById('powerCostKwh')?.value || 0.10);
+    const pue         = parseFloat(document.getElementById('pue')?.value || 1.20);
+    const personnel   = parseFloat(document.getElementById('personnelCost')?.value || 0);
+    const maintPct    = parseFloat(document.getElementById('maintenancePct')?.value || 10);
+    const cloudUtil   = parseFloat(document.getElementById('cloudUtilPct')?.value || 100);
+    const instGPUs    = t.inst ? t.inst.gpuCount : 8;
+    const numInst     = Math.ceil(t.numGPUs / instGPUs);
+    const annualKwh   = Math.round(t.numGPUs * t.gpu.tdp * 8760 * pue / 1000);
+    const annualOpex  = Math.round(t.onpremMonthlyOpex * 12);
+    const pricingLabel= {'1':'On-Demand','0.70':'1-Year Reserved (30% off)','0.55':'3-Year Reserved (45% off)'}[String(parseFloat(document.getElementById('pricingModel')?.value||1).toFixed(2))] || 'On-Demand';
+    const cloudName   = t.cloudProvider === 'azure' ? 'Azure' : 'DigitalOcean';
+
+    const tcoExplanation = `**How the TCO was calculated**
+
+**Setup**
+- ${t.numServers} servers × ${gpusPerSrv} GPUs/server = ${t.numGPUs} total ${t.gpu.name} GPUs
+- Analysis period: ${t.years} year(s) | Cloud: ${cloudName} | Pricing: ${pricingLabel}
+
+**On-Premises: ${fmtUSD2(t.totalOnPrem)} total over ${t.years} yr**
+
+- Hardware CapEx: (${t.numServers} servers × ${fmtUSD2(serverCost)}/server) + ${fmtUSD2(storageCost)} storage + ${fmtUSD2(netCost)} networking = **${fmtUSD2(t.hwCapex)}**
+- Annual Power: ${t.numGPUs} GPUs × ${t.gpu.tdp}W × 8,760 hrs × PUE ${pue} ÷ 1,000 × $${powerKwh}/kWh = ${annualKwh.toLocaleString()} kWh/yr = **${fmtUSD2(t.annualPowerCost)}/yr**
+- Annual Personnel: **${fmtUSD2(personnel)}/yr**
+- Annual Maintenance (${maintPct}% of CapEx): ${fmtUSD2(t.hwCapex)} × ${(maintPct/100).toFixed(2)} = **${fmtUSD2(t.annualMaintenance)}/yr**
+- Annual Software: **${fmtUSD2(swAnnual)}/yr**
+- Total Annual OpEx: ${fmtUSD2(t.annualPowerCost)} + ${fmtUSD2(personnel)} + ${fmtUSD2(t.annualMaintenance)} + ${fmtUSD2(swAnnual)} = **${fmtUSD2(annualOpex)}/yr** (${fmtUSD2(t.onpremMonthlyOpex)}/mo)
+- **Total On-Prem = ${fmtUSD2(t.hwCapex)} CapEx + (${fmtUSD2(annualOpex)}/yr × ${t.years} yrs) = ${fmtUSD2(t.hwCapex)} + ${fmtUSD2(annualOpex * t.years)} = ${fmtUSD2(t.totalOnPrem)}**
+
+**Cloud IaaS: ${fmtUSD2(t.totalCloud)} total over ${t.years} yr**
+
+- Instance: ${t.inst ? t.inst.label : '—'} at ${fmtUSD2(t.inst ? t.inst.hourly : 0)}/hr base → effective rate ${fmtUSD2(t.effectiveHourly)}/hr
+- Instances needed: ceil(${t.numGPUs} GPUs ÷ ${instGPUs} GPUs/instance) = **${numInst} instances**
+- Annual Compute: ${fmtUSD2(t.effectiveHourly)}/hr × ${numInst} instances × 8,760 hrs × ${cloudUtil}% = **${fmtUSD2(t.annualCompute)}/yr**
+- Annual Ancillary (storage + egress + support): **${fmtUSD2(t.annualAncillary)}/yr**
+- **Total Cloud = (${fmtUSD2(t.annualCompute)} + ${fmtUSD2(t.annualAncillary)}) × ${t.years} yrs = ${fmtUSD2(t.totalCloud)}**
+
+**Verdict**
+- ${t.totalOnPrem < t.totalCloud ? 'On-Premises' : 'Cloud IaaS'} is cheaper by ${fmtUSD2(Math.abs(t.totalOnPrem - t.totalCloud))} (${Math.abs(t.savingsPct).toFixed(1)}%) over ${t.years} years
+- Break-even: ${t.breakevenMonths !== null ? t.breakevenMonths.toFixed(1) + ' months' : 'N/A — cloud is cheaper from day 1'}`;
+
+    parts.push(`=== TCO CALCULATION WALKTHROUGH ===
+Servers: ${t.numServers} | GPUs: ${t.numGPUs} | GPU: ${t.gpu.name} | Years: ${t.years} | Cloud: ${cloudName}
+Server Cost: $${serverCost.toLocaleString()} | Storage: $${storageCost.toLocaleString()} | Networking: $${netCost.toLocaleString()}
+Power: $${powerKwh}/kWh | PUE: ${pue} | Personnel: $${personnel.toLocaleString()}/yr | Maintenance: ${maintPct}% | SW: $${swAnnual.toLocaleString()}/yr
+Instance: ${t.inst ? t.inst.label : '—'} | Base Rate: $${t.inst ? t.inst.hourly.toFixed(2) : '—'}/hr | Effective: $${t.effectiveHourly.toFixed(2)}/hr | Instances: ${numInst} | Util: ${cloudUtil}%
+
+AUTHORITATIVE RESULTS (do not recalculate these):
+Hardware CapEx = $${Math.round(t.hwCapex).toLocaleString()}
+Annual Power Cost = $${Math.round(t.annualPowerCost).toLocaleString()}/yr (${annualKwh.toLocaleString()} kWh/yr)
+Annual Personnel = $${Math.round(personnel).toLocaleString()}/yr
+Annual Maintenance = $${Math.round(t.annualMaintenance).toLocaleString()}/yr
+Annual Software = $${Math.round(swAnnual).toLocaleString()}/yr
+Total Annual OpEx = $${annualOpex.toLocaleString()}/yr = $${Math.round(t.onpremMonthlyOpex).toLocaleString()}/mo
+On-Prem Total (${t.years} yr) = $${Math.round(t.totalOnPrem).toLocaleString()}
+Annual Compute (cloud) = $${Math.round(t.annualCompute).toLocaleString()}/yr
+Annual Ancillary (cloud) = $${Math.round(t.annualAncillary).toLocaleString()}/yr
+Cloud Monthly = $${Math.round(t.cloudMonthly).toLocaleString()}/mo
+Cloud Total (${t.years} yr) = $${Math.round(t.totalCloud).toLocaleString()}
+Savings = $${Math.abs(Math.round(t.totalOnPrem - t.totalCloud)).toLocaleString()} (${Math.abs(t.savingsPct).toFixed(1)}%) in favour of ${t.totalOnPrem < t.totalCloud ? 'On-Prem' : 'Cloud'}
+Break-even = ${t.breakevenMonths !== null ? t.breakevenMonths.toFixed(1) + ' months' : 'N/A'}
+On-Prem $/GPU-Hour = $${t.onpremGPUHour.toFixed(2)}
+Cloud $/GPU-Hour = $${t.cloudGPUHour.toFixed(2)}
+On-Prem $/1M Tokens = ${t.onpremPerMToken !== null ? '$' + t.onpremPerMToken.toFixed(2) : 'N/A (run Sizing first)'}
+Cloud $/1M Tokens = ${t.cloudPerMToken !== null ? '$' + t.cloudPerMToken.toFixed(2) : 'N/A (run Sizing first)'}
+Annual Token Output (at ${Math.round(cloudUtil)}% util) = ${(() => { if (sizingResults && sizingResults.tpsPerGPU > 0) { const toks = sizingResults.tpsPerGPU * t.numGPUs * 3600 * 8760 * (cloudUtil/100); return (toks/1e9).toFixed(2) + 'B tokens/yr'; } return 'N/A'; })()}
+
+=== PRE-WRITTEN EXPLANATION FOR TCO QUESTIONS ===
+${tcoExplanation}
+
+=== PRE-WRITTEN EXPLANATION FOR UNIT ECONOMICS QUESTIONS ===
+${(() => {
+  const instGPUCount2 = t.inst ? t.inst.gpuCount : 8;
+  const gpuHrLines = `**On-Prem $/GPU-Hour = $${t.onpremGPUHour.toFixed(2)}**
+
+Formula: Total On-Prem TCO ÷ (NumGPUs × Years × 8,760 hours/yr)
+
+Step by step:
+- Total On-Prem TCO = $${Math.round(t.totalOnPrem).toLocaleString()}
+- GPUs in deployment = ${t.numGPUs}
+- Analysis period = ${t.years} year(s)
+- Hours per year = 8,760
+- GPU-hours in period = ${t.numGPUs} × ${t.years} × 8,760 = ${(t.numGPUs * t.years * 8760).toLocaleString()}
+- On-Prem $/GPU-Hour = $${Math.round(t.totalOnPrem).toLocaleString()} ÷ ${(t.numGPUs * t.years * 8760).toLocaleString()} = **$${t.onpremGPUHour.toFixed(2)}/GPU-hr**
+
+This includes ALL costs — hardware purchase, power, personnel, maintenance, and software — spread across every GPU-hour you own.
+
+**Cloud $/GPU-Hour = $${t.cloudGPUHour.toFixed(2)}**
+
+Formula: Effective Hourly Rate ÷ GPUs per Instance
+
+Step by step:
+- Base instance rate = $${t.inst ? t.inst.hourly.toFixed(2) : '—'}/hr (${t.inst ? t.inst.label : '—'})
+- Pricing factor = ${t.pricingFactor} (${({'1':'On-Demand','0.7':'1-Year Reserved','0.55':'3-Year Reserved'})[String(t.pricingFactor)] || 'Custom'})
+- Enterprise discount = ${Math.round((t.entDiscount||0)*100)}%
+- Effective instance rate = $${t.inst ? t.inst.hourly.toFixed(2) : '—'} × ${t.pricingFactor} × (1 − ${Math.round((t.entDiscount||0)*100)}%) = $${t.effectiveHourly.toFixed(2)}/hr
+- GPUs per instance = ${instGPUCount2}
+- Cloud $/GPU-Hour = $${t.effectiveHourly.toFixed(2)} ÷ ${instGPUCount2} = **$${t.cloudGPUHour.toFixed(2)}/GPU-hr**
+
+This is a fixed contract rate. It does not change with utilization.`;
+
+  if (t.onpremPerMToken === null) {
+    return gpuHrLines + `\n\n**$/1M Tokens — not available yet**\n\nRun the GenAI GPU Sizing calculator first. The $/1M token calculation requires the token throughput (tok/s) from the sizing model.`;
+  }
+
+  const systemTPS = sizingResults ? sizingResults.tpsPerGPU * t.numGPUs : 0;
+  const annualToks = systemTPS * 3600 * 8760 * (cloudUtil/100);
+  const annualToksB = (annualToks / 1e9).toFixed(2);
+  const annualToksM = Math.round(annualToks / 1e6).toLocaleString();
+
+  return gpuHrLines + `
+
+**On-Prem $/1M Tokens = $${t.onpremPerMToken.toFixed(2)}**
+
+Formula: (Total On-Prem TCO ÷ Years) ÷ (Annual Tokens ÷ 1,000,000)
+
+Step by step:
+- Token throughput per GPU = ${sizingResults ? sizingResults.tpsPerGPU.toFixed(1) : '—'} tok/s (from Sizing calc)
+- System throughput = ${sizingResults ? sizingResults.tpsPerGPU.toFixed(1) : '—'} tok/s × ${t.numGPUs} GPUs = ${systemTPS.toFixed(0)} tok/s
+- GPU utilization = ${Math.round(cloudUtil)}% (same as cloud, for apples-to-apples)
+- Annual tokens = ${systemTPS.toFixed(0)} tok/s × 3,600 × 8,760 × ${(cloudUtil/100).toFixed(2)} = ${annualToksM} M tokens/yr (${annualToksB}B/yr)
+- Annual on-prem cost = $${Math.round(t.totalOnPrem).toLocaleString()} ÷ ${t.years} yr = $${Math.round(t.totalOnPrem/t.years).toLocaleString()}/yr
+- On-Prem $/1M Tokens = $${Math.round(t.totalOnPrem/t.years).toLocaleString()} ÷ ${Math.round(annualToks/1e6).toLocaleString()}M = **$${t.onpremPerMToken.toFixed(2)}/1M tokens**
+
+**Cloud $/1M Tokens = $${t.cloudPerMToken !== null ? t.cloudPerMToken.toFixed(2) : '—'}**
+
+Formula: (Annual Compute + Annual Ancillary) ÷ (Annual Tokens ÷ 1,000,000)
+
+Step by step:
+- Annual cloud compute = $${Math.round(t.annualCompute).toLocaleString()}/yr
+- Annual ancillary (storage + egress + support) = $${Math.round(t.annualAncillary).toLocaleString()}/yr
+- Total annual cloud spend = $${Math.round(t.annualCompute).toLocaleString()} + $${Math.round(t.annualAncillary).toLocaleString()} = $${Math.round(t.annualCompute + t.annualAncillary).toLocaleString()}/yr
+- Annual tokens = ${annualToksM} M tokens/yr (same as on-prem)
+- Cloud $/1M Tokens = $${Math.round(t.annualCompute + t.annualAncillary).toLocaleString()} ÷ ${Math.round(annualToks/1e6).toLocaleString()}M = **$${t.cloudPerMToken !== null ? t.cloudPerMToken.toFixed(2) : '—'}/1M tokens**
+
+**Key difference:** On-Prem $/1M tokens uses the full amortized TCO including CapEx. Cloud $/1M tokens uses only the annual run rate. Both are divided by the same token output at the same utilization %, so the comparison is apples-to-apples.`;
+})()}`);
+  }
+
+  return parts.length ? parts.join('\n\n') : '[No calculator results yet — user has not run a calculation]';
+}
+
+function stripLatex(text) {
+  // Remove block LaTeX delimiters: \[ ... \] and \( ... \)
+  // NOTE: we deliberately do NOT strip $...$ here — dollar amounts ($50,000) would be destroyed.
+  text = text.replace(/\\\[[\s\S]*?\\\]/g, '');
+  text = text.replace(/\\\([\s\S]*?\\\)/g, '');
+  // Remove LaTeX commands: \ceil, \frac, \text{}, \times, etc.
+  text = text.replace(/\\(ceil|floor|frac|text|times|div|cdot|approx|le|ge|ne|pm|infty)\{?[^}]*\}?/g, '');
+  text = text.replace(/\\[a-zA-Z]+/g, '');
+  // Remove lone LaTeX braces (not adjacent to word chars)
+  text = text.replace(/(?<!\w)[{}](?!\w)/g, '');
+  return text;
+}
+
+function renderMarkdown(text) {
+  // Strip LaTeX before anything else
+  text = stripLatex(text);
+
+  // Escape HTML
+  let s = text
+    .replace(/&/g,'&amp;')
+    .replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;');
+
+  // Bold: **text**
+  s = s.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+  // Italic: *text* (but not inside words)
+  s = s.replace(/(?<!\w)\*([^*\n]+?)\*(?!\w)/g, '<em>$1</em>');
+  // Inline code: `code`
+  s = s.replace(/`([^`\n]+)`/g, '<code style="background:var(--bg-section);padding:1px 5px;border-radius:3px;font-size:11px;font-family:monospace;">$1</code>');
+
+  // Strip markdown table lines (| ... |)
+  s = s.replace(/^\|.+$/gm, '').replace(/^[-| :]+$/gm, '');
+
+  // Strip heading markers (###, ##, #) — replace with bold text
+  s = s.replace(/^#{1,3}\s+(.+)$/gm, '<strong>$1</strong>');
+
+  // Numbered lists
+  s = s.replace(/^(\d+)\.\s+(.+)$/gm, '<li style="margin:4px 0 4px 18px;list-style:decimal;">$2</li>');
+  // Bullet lists
+  s = s.replace(/^[-*]\s+(.+)$/gm, '<li style="margin:4px 0 4px 18px;list-style:disc;">$1</li>');
+  // Wrap consecutive <li> in <ul>
+  s = s.replace(/(<li[^>]*>[\s\S]*?<\/li>)(\s*<li[^>]*>[\s\S]*?<\/li>)*/g,
+    m => `<ul style="margin:6px 0;padding:0;">${m}</ul>`);
+
+  // Horizontal rules
+  s = s.replace(/^---+$/gm, '<hr style="border:none;border-top:1px solid var(--border);margin:10px 0;">');
+
+  // Double newline → paragraph break
+  s = s.replace(/\n{2,}/g, '</p><p style="margin:7px 0;">');
+  // Single newline → <br>
+  s = s.replace(/\n/g, '<br>');
+
+  return `<p style="margin:0;">${s}</p>`;
+}
+
+// Number validator: scan model reply for dollar/numeric figures not found in the source walkthrough
+function validateNumbers(reply, walkthrough) {
+  if (!walkthrough) return null;
+  const replyNums = [...reply.matchAll(/\$[\d,]+(?:\.\d+)?[MKB]?|\b\d[\d,]+(?:\.\d+)?\b/g)]
+    .map(m => m[0].replace(/[$,]/g,'').replace(/M$/,'000000').replace(/K$/,'000'));
+  const walkthroughStr = walkthrough.replace(/[$,]/g,'');
+  const mismatches = replyNums.filter(n => {
+    const rounded = Math.round(parseFloat(n));
+    if (rounded < 100) return false; // ignore small numbers like "8" or "32"
+    // Allow ±2% tolerance for rounding in the walkthrough
+    return !walkthroughStr.includes(String(rounded)) &&
+           !walkthroughStr.includes(String(rounded - 1)) &&
+           !walkthroughStr.includes(String(rounded + 1));
+  });
+  return mismatches.length > 0 ? mismatches : null;
+}
+
+function appendBotMessage(text) {
+  const container = document.getElementById('chat-messages');
+
+  // Extract [REF:N] tags, then strip them from the displayed text
+  const refs = [];
+  const refRegex = /\[REF:\s*(\d+)\s*\]/gi;
+  let m;
+  while ((m = refRegex.exec(text)) !== null) {
+    const n = parseInt(m[1], 10);
+    if (FORMULA_TITLES[n] && !refs.includes(n)) refs.push(n);
+  }
+  const cleanText = text.replace(refRegex, '').replace(/\n{3,}/g, '\n\n').trim();
+
+  const div = document.createElement('div');
+  div.className = 'chat-msg bot';
+  div.innerHTML = `<div class="msg-label">InfraCalc AI</div>${renderMarkdown(cleanText)}`;
+
+  // Append reference link(s) to the formula guide
+  if (refs.length) {
+    const refWrap = document.createElement('div');
+    refWrap.className = 'chat-ref-wrap';
+    refWrap.innerHTML = '<div class="chat-ref-label">📐 See the full derivation:</div>' +
+      refs.map(n =>
+        `<button class="chat-ref-link" onclick="goToFormula(${n})">Formula ${n} — ${FORMULA_TITLES[n]} →</button>`
+      ).join('');
+    div.appendChild(refWrap);
+  }
+
+  container.appendChild(div);
+  container.scrollTop = container.scrollHeight;
+}
+
+function appendUserMessage(text) {
+  const container = document.getElementById('chat-messages');
+  const div = document.createElement('div');
+  div.className = 'chat-msg user';
+  div.textContent = text;
+  container.appendChild(div);
+  container.scrollTop = container.scrollHeight;
+}
+
+function showTyping() {
+  const container = document.getElementById('chat-messages');
+  const div = document.createElement('div');
+  div.className = 'chat-typing';
+  div.id = 'chat-typing-indicator';
+  div.innerHTML = '<span></span><span></span><span></span>';
+  container.appendChild(div);
+  container.scrollTop = container.scrollHeight;
+  return div;
+}
+
+function removeTyping() {
+  const el = document.getElementById('chat-typing-indicator');
+  if (el) el.remove();
+}
+
+function escapeHtml(str) {
+  return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function setSendDisabled(disabled) {
+  document.getElementById('chat-send-btn').disabled = disabled;
+  document.getElementById('chat-textarea').disabled = disabled;
+}
+
+function showKeyRow(show) {
+  const row = document.getElementById('chat-key-row');
+  row.classList.toggle('visible', show);
+}
+
+function saveUserKey() {
+  const val = document.getElementById('chat-key-input').value.trim();
+  if (!val.startsWith('csk-')) {
+    alert('Please enter a valid Cerebras API key (starts with csk-)');
+    return;
+  }
+  localStorage.setItem('or_user_key', val);
+  showKeyRow(false);
+  appendBotMessage('API key saved. You can now continue chatting.');
+}
+
+function appendValidatorWarning() {
+  const container = document.getElementById('chat-messages');
+  const div = document.createElement('div');
+  div.style.cssText = 'font-size:10px;color:var(--accent-amber);padding:4px 10px;text-align:center;opacity:0.8;';
+  div.textContent = '⚠️ Some numbers above may not match your exact inputs — refer to the Results panel for verified figures.';
+  container.appendChild(div);
+  container.scrollTop = container.scrollHeight;
+}
+
+async function sendChatMessage() {
+  const textarea = document.getElementById('chat-textarea');
+  const text = textarea.value.trim();
+  if (!text || chatIsLoading) return;
+
+  // Hide suggestions after first user message
+  document.getElementById('chat-suggestions').style.display = 'none';
+
+  textarea.value = '';
+  textarea.style.height = 'auto';
+  appendUserMessage(text);
+
+  chatHistory.push({ role: 'user', content: text });
+  chatIsLoading = true;
+  setSendDisabled(true);
+  const typingEl = showTyping();
+
+  try {
+    const stateContext = buildCurrentStateContext();
+    const systemWithState = CHAT_SYSTEM_PROMPT + '\n\n' + stateContext;
+
+    const response = await fetch(CHAT_ENDPOINT, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${getActiveKey()}`,
+      },
+      body: JSON.stringify({
+        model: CHAT_MODEL,
+        messages: [
+          { role: 'system', content: systemWithState },
+          ...chatHistory.slice(-10),
+        ],
+        max_tokens: 1024,
+        temperature: 0.3,
+      }),
+    });
+
+    if (response.status === 429 || response.status === 402) {
+      removeTyping();
+      appendBotMessage('The API key has reached its rate limit. Please enter your own Cerebras API key below to continue. Get one free at cerebras.ai');
+      showKeyRow(true);
+      chatHistory.pop();
+      return;
+    }
+
+    if (response.status === 401) {
+      removeTyping();
+      appendBotMessage('Authentication failed (401). Possible causes:\n\n1. The API key is invalid or expired — verify it in your Cerebras dashboard at cerebras.ai\n2. The model name may be incorrect for Cerebras — check your dashboard for the exact model ID.\n\nEnter a valid Cerebras API key below to retry.');
+      showKeyRow(true);
+      chatHistory.pop();
+      return;
+    }
+
+    if (response.status === 404) {
+      removeTyping();
+      appendBotMessage('Model not found (404). The model "' + CHAT_MODEL + '" may not be available on Cerebras. Check your Cerebras dashboard for the correct model name.');
+      chatHistory.pop();
+      return;
+    }
+
+    if (!response.ok) {
+      const errData = await response.json().catch(() => ({}));
+      throw new Error(errData?.error?.message || `API error ${response.status}`);
+    }
+
+    const data = await response.json();
+    const reply = data.choices?.[0]?.message?.content?.trim() || 'Sorry, I could not generate a response. Please try again.';
+
+    chatHistory.push({ role: 'assistant', content: reply });
+    removeTyping();
+    appendBotMessage(reply);
+
+    // Number validation: warn if model used a figure not in the walkthrough
+    const walkthrough = buildCurrentStateContext();
+    const bad = validateNumbers(reply, walkthrough);
+    if (bad) {
+      appendValidatorWarning();
+    }
+
+  } catch (err) {
+    removeTyping();
+    appendBotMessage(`Something went wrong: ${err.message}. Please try again.`);
+    chatHistory.pop();
+  } finally {
+    chatIsLoading = false;
+    setSendDisabled(false);
+    document.getElementById('chat-textarea').focus();
+  }
+}
+
+function sendSuggestion(btn) {
+  document.getElementById('chat-textarea').value = btn.textContent;
+  sendChatMessage();
+}
+
+function chatKeyDown(e) {
+  if (e.key === 'Enter' && !e.shiftKey) {
+    e.preventDefault();
+    sendChatMessage();
+  }
+}
+
+function autoResize(el) {
+  el.style.height = 'auto';
+  el.style.height = Math.min(el.scrollHeight, 90) + 'px';
+}
+</script>
+</body>
+</html>
