@@ -2,3 +2,5 @@
 .netlify/
 past/
 *.pdf
+.claude/settings.json
+.claude/settings.local.json

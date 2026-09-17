@@ -3501,7 +3501,7 @@ document.addEventListener('DOMContentLoaded', () => {
 // CHATBOT
 // =====================================================================
 
-const CHAT_DEFAULT_KEY = 'csk-cfkpkn9n4tch2rhvtnt5t4vr26n8kje63h8tdckw328jmxvk';
+const CHAT_DEFAULT_KEY = '';
 const CHAT_MODEL       = 'gpt-oss-120b';
 const CHAT_ENDPOINT    = 'https://api.cerebras.ai/v1/chat/completions';
 
@@ -3707,7 +3707,7 @@ function goToFormula(n) {
 }
 
 // Access code gate
-const CHAT_ACCESS_CODE = 'AMD';
+const CHAT_ACCESS_CODE = 'INFRACALC';
 function isChatUnlocked() { return localStorage.getItem('chat_unlocked') === 'true'; }
 
 function applyGateState() {
@@ -3737,7 +3737,7 @@ function submitGateCode() {
 }
 
 function getActiveKey() {
-  return localStorage.getItem('or_user_key') || CHAT_DEFAULT_KEY;
+  return localStorage.getItem('or_user_key') || '';
 }
 
 function toggleChat() {
@@ -4156,6 +4156,13 @@ async function sendChatMessage() {
   const text = textarea.value.trim();
   if (!text || chatIsLoading) return;
 
+  // Require a user-supplied API key — no default key is bundled
+  if (!getActiveKey()) {
+    appendBotMessage('To use the AI assistant, please enter your Cerebras API key below. You can get a free key at [cerebras.ai](https://cerebras.ai).');
+    showKeyRow(true);
+    return;
+  }
+
   // Hide suggestions after first user message
   document.getElementById('chat-suggestions').style.display = 'none';
 
@@ -4191,7 +4198,7 @@ async function sendChatMessage() {
 
     if (response.status === 429 || response.status === 402) {
       removeTyping();
-      appendBotMessage('The API key has reached its rate limit. Please enter your own Cerebras API key below to continue. Get one free at cerebras.ai');
+      appendBotMessage('The API key has reached its rate limit. Please enter a valid Cerebras API key below to continue. Get one free at cerebras.ai');
       showKeyRow(true);
       chatHistory.pop();
       return;
