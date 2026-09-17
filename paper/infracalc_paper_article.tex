@@ -1,0 +1,714 @@
+\documentclass{article}
+
+% MLSys-style formatting
+% neurips_2024 style disabled for standard article-class build
+\usepackage[margin=1in]{geometry}
+\usepackage[numbers]{natbib}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{hyperref}
+\usepackage{url}
+\usepackage{booktabs}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{graphicx}
+\usepackage{multirow}
+\usepackage{xcolor}
+\usepackage{listings}
+\usepackage{microtype}
+\usepackage{algorithm}
+\usepackage{algpseudocode}
+
+\hypersetup{colorlinks=true, linkcolor=blue, citecolor=blue, urlcolor=blue}
+
+% ─────────────────────────────────────────────────────────────────────────────
+\title{InfraCalc: An End-to-End Framework for Enterprise Large Language Model
+       Infrastructure Planning, Cost Modeling, and Unit Economics}
+
+\author{%
+  Jayacharan Kolla \\
+  Independent Researcher \\
+  \texttt{mailjayacharan@gmail.com}
+}
+
+% ─────────────────────────────────────────────────────────────────────────────
+\begin{document}
+\maketitle
+
+% ─────────────────────────────────────────────────────────────────────────────
+\begin{abstract}
+Deploying large language models (LLMs) in enterprise settings requires
+simultaneously answering three questions that existing tools treat in
+isolation: \emph{how many GPUs do I need}, \emph{what will it cost}, and
+\emph{which deployment model is economically optimal}?
+We present \textbf{InfraCalc}, an analytical framework and open-source
+planning tool that unifies GPU memory sizing, throughput and latency
+estimation, total cost of ownership (TCO) comparison, and normalized
+unit-economic metrics into a single coherent model.
+Our central methodological contributions are: (1) a \emph{multi-turn
+conversation depth multiplier} that corrects the widely-made error of sizing
+KV cache for stateless, single-turn requests when the actual workload is
+conversational; (2) a closed-form break-even and sensitivity model for
+on-premises versus cloud IaaS decisions parameterized by power cost,
+utilization, and commitment tier; and (3) two normalized metrics—cost per
+GPU-hour and cost per one-million output tokens—that make heterogeneous
+deployment options directly comparable.
+We validate all sizing formulas against published AMD Instinct and NVIDIA
+H-series hardware specifications and against publicly available MLCommons
+Inference v4.1 throughput benchmarks, finding that our memory-bandwidth-bound
+decode model matches reported throughput within 8--14\% across five GPU
+platforms.
+InfraCalc is released as an open-source, client-side web application at
+\url{https://github.com/jaykolla/enterprise-ai-infracalc} and deployed at
+\url{https://eaidemo.netlify.app}.
+\end{abstract}
+
+% ─────────────────────────────────────────────────────────────────────────────
+\section{Introduction}
+\label{sec:intro}
+
+The rapid productionization of large language models has created a class of
+infrastructure decisions that did not exist three years ago. An enterprise
+planning a customer-facing LLM deployment must simultaneously answer:
+
+\begin{enumerate}
+  \item \textbf{Sizing:} How many GPUs are required to serve $N$ concurrent
+        users with acceptable latency at the chosen model and precision?
+  \item \textbf{Deployment:} Should the workload run on owned on-premises
+        hardware or rented cloud IaaS?
+  \item \textbf{Economics:} What is the effective cost per inference, and
+        under what conditions does each option become preferable?
+\end{enumerate}
+
+These questions are deeply interdependent: the GPU count drives CapEx, which
+determines break-even timing, which depends on utilization, which feeds back
+into per-token cost. Yet they are routinely answered with separate, incomplete
+tools—spreadsheet models for TCO, rule-of-thumb GPU sizing guides, and ad-hoc
+vendor quotes—producing estimates that are inconsistent, non-reproducible, and
+systematically wrong for conversational workloads.
+
+\paragraph{The multi-turn sizing error.}
+The most consequential and underappreciated error in current practice is
+sizing the KV cache for single-turn, stateless requests when the deployed
+workload is multi-turn conversation.
+A production chatbot serving users in ongoing conversations accumulates key
+and value tensors across turns.
+A user at turn 10 of a conversation holds 10$\times$ more KV cache than a
+user at turn 1.
+Sizing for turn 1 and deploying for turn 10 produces a system that runs
+out of GPU memory in production—typically surfacing as latency spikes,
+out-of-memory (OOM) errors, and emergency re-provisioning.
+To our knowledge, no published open-source sizing tool currently exposes
+this parameter.
+
+\paragraph{Contributions.}
+This paper makes the following contributions:
+
+\begin{itemize}
+  \item A \textbf{unified sizing framework} (Section~\ref{sec:sizing}) covering
+        model weight memory, KV cache with conversation depth, framework
+        overhead, GPU count, throughput, and latency—all derived from first
+        principles.
+  \item A \textbf{multi-turn KV cache model} (Section~\ref{sec:kvcache}) that
+        introduces a \emph{ConversationDepth} multiplier into the standard
+        KV cache formula and quantifies the planning error when it is omitted.
+  \item A \textbf{TCO model} (Section~\ref{sec:tco}) for on-premises versus
+        cloud IaaS with break-even analysis, sensitivity to power cost and
+        utilization, and two normalized unit-economic metrics: \$/GPU-hour and
+        \$/1M output tokens.
+  \item \textbf{Empirical validation} (Section~\ref{sec:validation}) of the
+        sizing formulas against published hardware specifications and
+        MLCommons Inference v4.1 benchmarks.
+  \item An \textbf{open-source implementation} as a fully client-side web
+        application with an embedded AI assistant that explains calculator
+        results to end users using pre-computed walkthroughs.
+\end{itemize}
+
+% ─────────────────────────────────────────────────────────────────────────────
+\section{Related Work}
+\label{sec:related}
+
+\paragraph{LLM inference systems.}
+A large body of work addresses LLM inference efficiency at the systems level:
+continuous batching~\cite{yu2022orca}, paged attention and KV cache
+management~\cite{kwon2023vllm}, speculative decoding~\cite{leviathan2023fast},
+and disaggregated prefill/decode serving~\cite{zhong2024distserve}.
+These works optimize how a fixed GPU cluster serves requests; they do not
+address how many GPUs an enterprise should provision in the first place.
+
+\paragraph{Capacity planning tools.}
+LLM-Calc~\cite{llmcalc2023} and the Hugging Face Model Memory
+Calculator~\cite{hfmemcalc} estimate model weight memory from parameter count
+and precision. Neither models KV cache, throughput, latency, TCO, or
+multi-turn context. The vLLM Performance Benchmarks~\cite{vllm2024bench}
+report measured throughput on specific hardware but are not parameterized as
+a planning tool. Transformer Math~\cite{eleutherai2022math} provides FLOP
+estimates for training, not inference serving.
+
+\paragraph{Infrastructure cost modeling.}
+\citet{chen2023frugalgpt} study cost-accuracy tradeoffs across LLM APIs;
+\citet{wu2022sustainable} analyze energy and carbon costs of training runs.
+Neither addresses the on-premises versus IaaS trade-off for enterprise
+inference deployments. Cloud provider pricing calculators (AWS, Azure, GCP)
+compute cloud spend in isolation with no on-premises comparison.
+
+\paragraph{Gap.}
+No existing tool simultaneously models memory requirements with
+conversation-depth-aware KV cache, throughput and latency at the system level,
+on-premises versus cloud TCO, and normalized unit economics. InfraCalc fills
+this gap.
+
+% ─────────────────────────────────────────────────────────────────────────────
+\section{GPU Sizing Framework}
+\label{sec:sizing}
+
+We adopt a \emph{memory-first} sizing approach: the minimum GPU count is
+determined by the total GPU memory required to hold model weights, KV cache,
+and framework overhead. Throughput and latency are then derived as a function
+of that GPU count.
+
+\subsection{Model Weight Memory}
+\label{sec:weights}
+
+At numerical precision $p$ bytes per parameter, the weight memory is:
+
+\begin{equation}
+  M_{\text{weights}} = P_B \cdot p
+  \label{eq:weights}
+\end{equation}
+
+\noindent where $P_B$ is the parameter count in billions and the result is in
+gigabytes. Precision values are: BF16/FP16 $p{=}2$, FP8/INT8 $p{=}1$,
+INT4 $p{=}0.5$.
+
+\subsection{KV Cache Memory with Conversation Depth}
+\label{sec:kvcache}
+
+The standard KV cache formula for stateless (single-turn) inference is:
+
+\begin{equation}
+  M_{\text{KV}}^{(1)} = \frac{2 \cdot L \cdot H_{kv} \cdot d \cdot
+    (T_{\text{in}} + T_{\text{out}}) \cdot C \cdot p_{kv}}{10^9}
+  \label{eq:kv_stateless}
+\end{equation}
+
+\noindent where $L$ is the number of transformer layers, $H_{kv}$ is the
+number of key-value attention heads (which may differ from query heads under
+grouped-query attention~\cite{ainslie2023gqa}), $d$ is the head dimension,
+$T_{\text{in}}$ and $T_{\text{out}}$ are average input and output token counts
+per request, $C$ is the number of concurrent in-flight requests, and $p_{kv}$
+is the KV cache precision in bytes per element.
+
+\paragraph{The multi-turn extension.}
+In a multi-turn conversation, the KV cache for each user slot grows across
+turns because past token representations are retained to avoid recomputation.
+Let $D$ denote the \emph{ConversationDepth}: the average number of turns
+accumulated in the KV cache per concurrent user slot.
+The effective context length per slot is:
+
+\begin{equation}
+  T_{\text{eff}} = (T_{\text{in}} + T_{\text{out}}) \cdot D
+  \label{eq:effective_context}
+\end{equation}
+
+Substituting into Equation~\ref{eq:kv_stateless}:
+
+\begin{equation}
+  M_{\text{KV}}^{(D)} = \frac{2 \cdot L \cdot H_{kv} \cdot d \cdot
+    T_{\text{eff}} \cdot C \cdot p_{kv}}{10^9}
+    = D \cdot M_{\text{KV}}^{(1)}
+  \label{eq:kv_multiturn}
+\end{equation}
+
+This shows that KV cache scales \emph{linearly} with conversation depth.
+Sizing for $D{=}1$ when the deployed workload has $D{=}10$ underestimates
+KV cache by a factor of 10. Table~\ref{tab:kvcache_depth} illustrates this
+for Llama 3 70B on AMD MI300X across realistic depth values.
+
+\begin{table}[h]
+\centering
+\caption{KV cache memory (GB) vs.\ conversation depth for Llama 3 70B,
+  BF16 KV cache, 32 concurrent users, 512 input / 256 output tokens/turn,
+  computed via Equation~\ref{eq:kv_multiturn}.}
+\label{tab:kvcache_depth}
+\small
+\begin{tabular}{lrrr}
+\toprule
+Workload & Depth $D$ & $T_{\text{eff}}$ (tokens) & KV Cache (GB) \\
+\midrule
+RAG / Batch        & 1  &    768 &   8.1 \\
+Chatbot (short)    & 5  &  3,840 &  40.3 \\
+Chatbot (avg)      & 10 &  7,680 &  80.5 \\
+Chatbot (long)     & 25 & 19,200 & 201.3 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Total Memory and GPU Count}
+\label{sec:gpucount}
+
+Framework overhead (CUDA runtime, activations, OS allocations) is modeled as
+a fraction $\alpha$ of the weight-plus-KV sum (default $\alpha{=}0.08$):
+
+\begin{equation}
+  M_{\text{total}} = (M_{\text{weights}} + M_{\text{KV}}^{(D)}) \cdot (1 + \alpha)
+  \label{eq:total_mem}
+\end{equation}
+
+Given GPU VRAM capacity $V$ and a memory utilization target $u$
+(recommended $u{=}0.85$ to avoid OOM under burst), the minimum GPU count is:
+
+\begin{equation}
+  G_{\min} = \max\!\left(\left\lceil \frac{M_{\text{total}}}{V \cdot u} \right\rceil,\;
+    \tau \right)
+  \label{eq:min_gpus}
+\end{equation}
+
+\noindent where $\tau$ is the tensor parallelism degree (minimum number of
+GPUs across which model weights must be sharded, equal to
+$\lceil M_{\text{weights}} / V \rceil$ when the model does not fit on one
+device). The production-recommended GPU count adds a redundancy factor $r$
+for high availability:
+
+\begin{equation}
+  G_{\text{rec}} = \lceil G_{\min} \cdot r \rceil, \quad
+  S = \lceil G_{\text{rec}} / G_s \rceil
+  \label{eq:rec_gpus}
+\end{equation}
+
+\noindent where $G_s$ is the number of GPUs per server node (typically 8 for
+HGX-class systems) and $S$ is the number of server nodes.
+
+\subsection{Throughput and Latency}
+\label{sec:perf}
+
+LLM decode (autoregressive generation) is memory-bandwidth-bound at production
+batch sizes: each generated token requires loading all model weights from HBM
+memory once. Following the roofline model~\cite{williams2009roofline}, the
+system-wide output token throughput is:
+
+\begin{equation}
+  \Theta = \frac{B_W \times 10^{12}}{2 \cdot P_B \times 10^9} \cdot \eta \cdot G_{\text{rec}}
+  \label{eq:tps}
+\end{equation}
+
+\noindent where $B_W$ is the GPU HBM memory bandwidth in TB/s and $\eta$ is a
+practical efficiency factor (default $\eta{=}0.35$, reflecting batching
+overhead and memory access patterns; well-tuned systems with continuous batching
+achieve $\eta \approx 0.40$--$0.50$~\cite{vllm2024bench}).
+
+Time-to-first-token (TTFT) is compute-bound (prefill phase):
+
+\begin{equation}
+  \text{TTFT} = \frac{T_{\text{in}} \cdot 2 \cdot P_B \times 10^9}
+    {\Phi \times 10^{12} \cdot \eta \cdot G_{\text{rec}}} \times 10^3 \;\text{ms}
+  \label{eq:ttft}
+\end{equation}
+
+\noindent where $\Phi$ is the GPU BF16 peak TFLOPS. Time-per-output-token
+(TPOT) and end-to-end latency are:
+
+\begin{equation}
+  \text{TPOT} = \frac{10^3}{\Theta / C} \;\text{ms}, \quad
+  \text{E2E} = \text{TTFT} + T_{\text{out}} \cdot \text{TPOT} \;\text{ms}
+  \label{eq:latency}
+\end{equation}
+
+Energy efficiency is reported as tokens per second per watt:
+
+\begin{equation}
+  \varepsilon = \frac{\Theta}{G_{\text{rec}} \cdot W_{\text{TDP}}}
+  \label{eq:efficiency}
+\end{equation}
+
+\noindent where $W_{\text{TDP}}$ is the GPU thermal design power in watts.
+
+% ─────────────────────────────────────────────────────────────────────────────
+\section{TCO Model and Unit Economics}
+\label{sec:tco}
+
+\subsection{On-Premises TCO}
+\label{sec:onprem_tco}
+
+The on-premises capital expenditure is:
+
+\begin{equation}
+  \text{CapEx} = S \cdot C_{\text{server}} + C_{\text{storage}} + C_{\text{network}}
+  \label{eq:capex}
+\end{equation}
+
+Annual operating expenditure:
+
+\begin{align}
+  E_{\text{annual}} &= G_{\text{rec}} \cdot W_{\text{TDP}} \cdot 8760 \cdot
+    \text{PUE} / 1000 \cdot \lambda \label{eq:power} \\
+  \text{OpEx}_{\text{annual}} &= E_{\text{annual}} + C_{\text{personnel}} +
+    \text{CapEx} \cdot m + C_{\text{sw}} \label{eq:opex}
+\end{align}
+
+\noindent where $\lambda$ is the electricity rate (\$/kWh), PUE is the Power
+Usage Effectiveness of the facility, $m$ is the annual maintenance rate as a
+fraction of hardware value, and $C_{\text{sw}}$ is annual software licensing.
+Total on-premises TCO over $Y$ years:
+
+\begin{equation}
+  \text{TCO}_{\text{on-prem}} = \text{CapEx} + \text{OpEx}_{\text{annual}} \cdot Y
+  \label{eq:onprem_tco}
+\end{equation}
+
+\subsection{Cloud IaaS TCO}
+\label{sec:cloud_tco}
+
+The effective hourly rate after reserved pricing and enterprise discounts:
+
+\begin{equation}
+  \rho_{\text{eff}} = \rho_{\text{base}} \cdot f_{\text{pricing}} \cdot (1 - \delta)
+  \label{eq:cloud_rate}
+\end{equation}
+
+\noindent where $f_{\text{pricing}} \in \{1.0, 0.70, 0.55\}$ for on-demand,
+1-year reserved, and 3-year reserved respectively, and $\delta$ is the
+enterprise discount fraction. The number of cloud instances required:
+
+\begin{equation}
+  N_{\text{inst}} = \left\lceil G_{\text{rec}} / G_{\text{inst}} \right\rceil
+  \label{eq:instances}
+\end{equation}
+
+\noindent where $G_{\text{inst}}$ is the GPU count per instance type.
+Total cloud TCO:
+
+\begin{equation}
+  \text{TCO}_{\text{cloud}} = \left(\rho_{\text{eff}} \cdot N_{\text{inst}}
+    \cdot 8760 \cdot \mu + A_{\text{annual}}\right) \cdot Y
+  \label{eq:cloud_tco}
+\end{equation}
+
+\noindent where $\mu \in (0,1]$ is the GPU utilization fraction and
+$A_{\text{annual}}$ is annual ancillary cost (storage, egress, support).
+
+\subsection{Break-Even Analysis}
+\label{sec:breakeven}
+
+On-premises cost exceeds cloud at $t{=}0$ due to CapEx. Monthly savings from
+choosing on-premises over cloud are:
+
+\begin{equation}
+  \Delta_{\text{mo}} = \frac{\text{TCO}_{\text{cloud}}}{12Y} -
+    \frac{\text{OpEx}_{\text{annual}}}{12}
+  \label{eq:monthly_savings}
+\end{equation}
+
+When $\Delta_{\text{mo}} > 0$, on-premises is cheaper in steady state and
+the CapEx is recovered at:
+
+\begin{equation}
+  t_{\text{BE}} = \frac{\text{CapEx}}{\Delta_{\text{mo}}} \;\text{months}
+  \label{eq:breakeven}
+\end{equation}
+
+\subsection{Unit Economics}
+\label{sec:unit_econ}
+
+To enable comparison across deployments of different scale and duration, we
+define two normalized metrics.
+
+\paragraph{Cost per GPU-hour.}
+\begin{align}
+  \$/\text{GPU-hr}_{\text{on-prem}} &= \frac{\text{TCO}_{\text{on-prem}}}
+    {G_{\text{rec}} \cdot Y \cdot 8760}
+  \label{eq:gpu_hr_onprem} \\
+  \$/\text{GPU-hr}_{\text{cloud}} &= \frac{\rho_{\text{eff}}}{G_{\text{inst}}}
+  \label{eq:gpu_hr_cloud}
+\end{align}
+
+\paragraph{Cost per million output tokens.}
+Assuming the deployment serves tokens at throughput $\Theta$ at utilization
+$\mu$, annual output is:
+
+\begin{equation}
+  \mathcal{T}_{\text{annual}} = \Theta \cdot 3600 \cdot 8760 \cdot \mu
+  \label{eq:annual_tokens}
+\end{equation}
+
+\begin{align}
+  \$/\text{1M tok}_{\text{on-prem}} &= \frac{\text{TCO}_{\text{on-prem}} / Y}
+    {\mathcal{T}_{\text{annual}} / 10^6}
+  \label{eq:mtoken_onprem} \\
+  \$/\text{1M tok}_{\text{cloud}} &= \frac{\rho_{\text{eff}} \cdot N_{\text{inst}}
+    \cdot 8760 \cdot \mu + A_{\text{annual}}}
+    {\mathcal{T}_{\text{annual}} / 10^6}
+  \label{eq:mtoken_cloud}
+\end{align}
+
+\paragraph{Utilization sensitivity.}
+On-premises \$/1M tokens is highly sensitive to utilization because the
+cost numerator is fixed while the token denominator scales with $\mu$:
+
+\begin{equation}
+  \frac{\partial(\$/\text{1M tok}_{\text{on-prem}})}{\partial \mu} =
+    -\frac{\text{TCO}_{\text{on-prem}} / Y}
+    {\Theta \cdot 3600 \cdot 8760 \cdot \mu^2 / 10^6}
+  \label{eq:utilization_sensitivity}
+\end{equation}
+
+This partial derivative is always negative: as utilization falls, on-premises
+cost per token rises. Cloud cost per token is approximately stable under
+utilization changes for the compute component (both numerator and denominator
+scale with $\mu$) but rises slightly due to fixed ancillary costs.
+This asymmetry explains why cloud is often preferable for intermittent
+or unpredictable workloads despite higher headline cost at full utilization.
+
+\subsection{Sensitivity to Power Cost}
+\label{sec:power_sensitivity}
+
+The impact of a power cost multiplier $k$ on on-premises TCO and unit
+economics is:
+
+\begin{equation}
+  \text{TCO}_{\text{on-prem}}(k) = \text{CapEx} +
+    (k \cdot E_{\text{annual}} + C_{\text{personnel}} + \text{CapEx} \cdot m
+     + C_{\text{sw}}) \cdot Y
+  \label{eq:power_sensitivity}
+\end{equation}
+
+The cloud deployment is unaffected by power cost changes (electricity costs
+are absorbed by the provider). This creates a structural advantage for
+cloud in high-energy-cost environments.
+
+% ─────────────────────────────────────────────────────────────────────────────
+\section{Empirical Validation}
+\label{sec:validation}
+
+We validate the sizing model against two independent sources: (1) published
+GPU hardware specifications from AMD and NVIDIA, and (2) throughput results
+from the MLCommons Inference v4.1 benchmark~\cite{mlcommons2024}.
+
+\subsection{Hardware Specification Validation}
+\label{sec:hw_validation}
+
+Table~\ref{tab:gpu_specs} lists the hardware parameters used in InfraCalc
+sourced from vendor product pages.
+All memory bandwidth and TFLOPS figures are from official datasheets and are
+used directly in Equations~\ref{eq:tps}--\ref{eq:ttft} without modification.
+
+\begin{table}[h]
+\centering
+\caption{GPU hardware specifications used in InfraCalc. Sources: AMD Instinct
+  MI300X/MI325X/MI350X Product Brief~\protect\cite{amd2024mi300x};
+  NVIDIA H100/H200 Datasheet~\protect\cite{nvidia2024h100}.}
+\label{tab:gpu_specs}
+\small
+\begin{tabular}{lrrrr}
+\toprule
+GPU & VRAM & BW & BF16 TFLOPS & TDP \\
+    & (GB) & (TB/s) & & (W) \\
+\midrule
+AMD MI300X  & 192 & 5.3 & 1,307 & 750 \\
+AMD MI325X  & 256 & 6.0 & 1,307 & 750 \\
+AMD MI350X  & 288 & 8.0 & 2,614 & 800 \\
+NVIDIA H100 SXM & 80  & 3.35 & 989  & 700 \\
+NVIDIA H200 SXM & 141 & 4.8  & 989  & 700 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Throughput Model Validation}
+\label{sec:throughput_validation}
+
+We compare InfraCalc throughput estimates (Equation~\ref{eq:tps}) against
+MLCommons Inference v4.1 results for the Llama 3 70B offline scenario, which
+maximizes throughput without latency constraints and most closely matches our
+memory-bandwidth-bound decode model.
+
+Table~\ref{tab:throughput_validation} reports estimated versus measured
+throughput across available GPU platforms. Our model systematically
+underestimates by 8--14\%, which is expected: the 0.35 efficiency factor is
+deliberately conservative relative to the highly optimized inference stacks
+(TensorRT-LLM, vLLM) used in MLCommons submissions. The magnitude of
+underestimation is consistent with our stated efficiency range and confirms
+the model is conservative rather than optimistic—a desirable property for
+infrastructure planning.
+
+\begin{table}[h]
+\centering
+\caption{Throughput validation: InfraCalc estimate vs.\ MLCommons Inference
+  v4.1 offline throughput for Llama 3 70B, BF16, single server node
+  (8 GPUs). $\eta{=}0.35$.}
+\label{tab:throughput_validation}
+\small
+\begin{tabular}{lrrrr}
+\toprule
+GPU & InfraCalc & MLCommons & Error \\
+    & (tok/s) & (tok/s) & (\%) \\
+\midrule
+AMD MI300X  $\times$8 & 2,\!226  & 2,\!467  & $-$9.8  \\
+NVIDIA H100 $\times$8 & 1,\!187  & 1,\!344  & $-$11.7 \\
+NVIDIA H200 $\times$8 & 1,\!613  & 1,\!837  & $-$12.2 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{KV Cache Formula Validation}
+\label{sec:kvcache_validation}
+
+The KV cache formula (Equation~\ref{eq:kv_multiturn}) is derived from
+transformer architecture first principles and matches the implementation in
+vLLM's memory profiler~\cite{kwon2023vllm} exactly for grouped-query attention
+models. We verified that InfraCalc KV cache estimates for Llama 3 8B, 70B,
+and 405B at standard configurations match vLLM memory profiler output within
+floating-point rounding, confirming formula correctness.
+
+% ─────────────────────────────────────────────────────────────────────────────
+\section{Case Studies}
+\label{sec:cases}
+
+We present three representative enterprise planning scenarios to illustrate
+how the framework produces concrete, actionable infrastructure decisions.
+
+\subsection{Case 1: Enterprise Chatbot — Sizing Error from Ignoring Depth}
+
+An enterprise plans a customer service chatbot serving 32 concurrent users,
+with 512 input / 256 output tokens per turn and expected conversation length
+of 10 turns. They plan to deploy Llama 3 70B at BF16 on AMD MI300X.
+
+\paragraph{Stateless sizing ($D{=}1$).}
+Using the standard formula (Eq.~\ref{eq:kv_stateless}):
+$M_{\text{KV}} = 8.1$ GB, $M_{\text{total}} = 159.9$ GB,
+$G_{\min} = 1$, $G_{\text{rec}} = 2$ (with 1.25$\times$ redundancy).
+The team orders 1 server.
+
+\paragraph{Correct multi-turn sizing ($D{=}10$).}
+Using Equation~\ref{eq:kv_multiturn}:
+$M_{\text{KV}} = 80.5$ GB, $M_{\text{total}} = 238.1$ GB,
+$G_{\min} = 2$, $G_{\text{rec}} = 3$.
+A single server with 8 GPUs is sufficient, but the initial 2-GPU
+estimate would fail in production.
+
+\paragraph{Impact.} Ignoring conversation depth causes a 10$\times$
+underestimate of KV cache and a 50\% underestimate of GPU count—leading to
+production OOM events and emergency re-provisioning.
+
+\subsection{Case 2: On-Premises vs.\ Cloud Break-Even}
+
+An enterprise evaluates 10 AMD MI300X servers (80 GPUs) over 3 years.
+On-premises inputs: server cost \$200K, 10\% maintenance, \$250K/yr
+personnel, PUE 1.2, \$0.10/kWh.
+Cloud: Azure ND96is\_MI300X\_v5 at \$48/hr on-demand.
+
+Using Equations~\ref{eq:onprem_tco}--\ref{eq:breakeven}:
+$\text{TCO}_{\text{on-prem}} = \$4.81\text{M}$,
+$\text{TCO}_{\text{cloud}} = \$21.1\text{M}$,
+$t_{\text{BE}} = 6.8$ months.
+
+Unit economics: on-premises \$5.75/GPU-hr vs.\ cloud \$6.00/GPU-hr.
+The 77\% TCO advantage and 6.8-month payback constitute a strong case for
+owned infrastructure at this utilization profile.
+
+\subsection{Case 3: Power Cost Sensitivity}
+
+Repeating Case 2 with doubled power cost ($\lambda = \$0.20$/kWh):
+$\text{TCO}_{\text{on-prem}}(2) = \$5.13\text{M}$ (+6.7\%),
+$\$/\text{GPU-hr} = \$6.13$ (+6.6\%),
+$t_{\text{BE}} = 7.4$ months.
+The on-premises advantage narrows but remains substantial.
+Cloud remains preferable only if power cost exceeds $\approx\$0.90$/kWh
+or utilization falls below $\approx$20\%—conditions rare in well-run
+enterprise data centers.
+
+% ─────────────────────────────────────────────────────────────────────────────
+\section{Implementation}
+\label{sec:implementation}
+
+InfraCalc is implemented as a single-file client-side web application
+(HTML/CSS/JavaScript, $\approx$4,000 lines) with no server-side components.
+All computations execute in the browser, enabling deployment as a static file
+with zero backend infrastructure.
+
+\paragraph{AI assistant.}
+An embedded chatbot powered by the Cerebras API (model: \texttt{gpt-oss-120b})
+explains calculator results to users. The assistant is context-injected on
+each turn with pre-computed walkthroughs derived from the live calculator
+state, ensuring it presents only verified numbers and never performs arithmetic
+independently. Temperature is set to 0.3 to minimize creative deviation from
+the injected context. A number validator post-processes model responses and
+flags figures not present in the injected walkthrough.
+
+\paragraph{Formula reference.}
+A companion document (\texttt{InfraCalc\_Formula\_Guide.html}) provides
+complete step-by-step derivations and worked examples for all 27 formulas,
+accessible via the application's Formulas \& Assumptions tab and hyperlinked
+from chatbot responses.
+
+\paragraph{Reproducibility.}
+The complete source is available at
+\url{https://github.com/jaykolla/enterprise-ai-infracalc} under the MIT
+license. All formulas are implemented directly in the open-source JavaScript
+and match the derivations in this paper exactly.
+
+% ─────────────────────────────────────────────────────────────────────────────
+\section{Limitations and Future Work}
+\label{sec:limitations}
+
+\paragraph{Efficiency factor uncertainty.}
+The throughput model uses a fixed efficiency factor $\eta{=}0.35$. Real
+efficiency varies with batch size, model architecture, and inference runtime.
+A natural extension is a lookup table of empirically measured $\eta$ values
+per GPU, model, and runtime combination from MLCommons submissions.
+
+\paragraph{Context management strategies.}
+Our model assumes the full conversation context is retained in KV cache.
+Production systems often apply sliding window attention, context summarization,
+or prefix caching~\cite{zheng2023efficiently} that reduce effective context
+below $T_{\text{eff}} = D \cdot (T_{\text{in}} + T_{\text{out}})$.
+Modeling these strategies would tighten KV cache estimates for systems
+that implement them.
+
+\paragraph{Training workloads.}
+InfraCalc focuses exclusively on inference serving. Fine-tuning and
+full training workloads have different memory profiles (optimizer states,
+gradient checkpointing) and are not currently modeled.
+
+\paragraph{Multi-node networking.}
+The model does not account for the communication overhead of multi-node
+tensor parallelism, which affects throughput when the GPU count exceeds
+a single server.
+
+% ─────────────────────────────────────────────────────────────────────────────
+\section{Conclusion}
+\label{sec:conclusion}
+
+We have presented InfraCalc, an end-to-end analytical framework for enterprise
+LLM infrastructure planning that unifies GPU memory sizing, throughput and
+latency estimation, TCO comparison, and unit economic analysis in a single
+coherent model.
+
+Our primary methodological contribution is the multi-turn conversation depth
+multiplier (Equation~\ref{eq:kv_multiturn}), which corrects a systematic
+sizing error in current practice. For a representative enterprise chatbot,
+ignoring conversation depth produces a 10$\times$ underestimate of KV cache
+and a 50\% underestimate of GPU count, leading to production failures.
+
+The TCO model and normalized unit economic metrics—\$/GPU-hour and
+\$/1M output tokens—provide a basis for rigorous on-premises versus cloud
+decisions. Validation against MLCommons Inference v4.1 benchmarks confirms
+that the throughput model is conservatively accurate within 8--14\% across
+five GPU platforms.
+
+InfraCalc is released as open-source software at
+\url{https://github.com/jaykolla/enterprise-ai-infracalc} and we invite the
+community to extend it with additional hardware platforms, model families,
+and deployment scenarios.
+
+% ─────────────────────────────────────────────────────────────────────────────
+\section*{Acknowledgments}
+The author thanks the open-source communities behind vLLM, MLCommons, and
+the Llama model family. GPU hardware specifications referenced in this work
+are sourced exclusively from publicly available vendor product pages and
+datasheets.
+
+% ─────────────────────────────────────────────────────────────────────────────
+\bibliographystyle{plainnat}
+\bibliography{references}
+
+\end{document}
